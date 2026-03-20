@@ -11,7 +11,6 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ProjectForm } from "@/components/projects/project-form";
 import { useToast } from "@/components/ui/toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import type { Project } from "@/types";
 
@@ -73,23 +72,13 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       cell: ({ row }) => <CurrencyDisplay amount={row.original.totalBudget} />,
     },
     {
-      id: "percentSpent",
-      header: "% Spent",
-      cell: ({ row }) => {
-        const budget = row.original.totalBudget;
-        const pct = budget > 0 ? 0 : 0; // Actual cost not on list view; shows 0 placeholder
-        return (
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full"
-                style={{ width: `${Math.min(pct, 100)}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
-          </div>
-        );
-      },
+      accessorKey: "address",
+      header: "Address",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.address || "—"}
+        </span>
+      ),
     },
     {
       accessorKey: "projectManager",
