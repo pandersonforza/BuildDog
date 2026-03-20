@@ -7,15 +7,15 @@ interface LogoProps {
 
 export function Logo({ size = "md", className }: LogoProps) {
   const sizeClasses = {
-    sm: "text-lg",
-    md: "text-xl",
-    lg: "text-3xl",
+    sm: "text-xl",
+    md: "text-2xl",
+    lg: "text-4xl",
   };
 
   const barHeight = {
-    sm: "h-4",
-    md: "h-5",
-    lg: "h-7",
+    sm: "h-5",
+    md: "h-6",
+    lg: "h-8",
   };
 
   return (
