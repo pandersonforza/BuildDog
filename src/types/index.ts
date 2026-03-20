@@ -96,6 +96,7 @@ export interface PortfolioKPIs {
   totalDrawsFunded: number;
   budgetVariance: number;
   budgetVariancePercent: number;
+  monthlyPaid?: number;
 }
 
 export interface BudgetSummary {

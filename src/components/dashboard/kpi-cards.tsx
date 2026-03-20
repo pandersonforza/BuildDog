@@ -20,10 +20,10 @@ export function KPICards({ data }: KPICardsProps) {
       subtitle: `${data.totalProjects} projects`,
     },
     {
-      title: "Total Spent",
-      value: data.totalActualCost,
+      title: "Paid This Month",
+      value: data.monthlyPaid ?? 0,
       icon: TrendingUp,
-      subtitle: `${data.totalBudget > 0 ? ((data.totalActualCost / data.totalBudget) * 100).toFixed(1) : 0}% of budget`,
+      subtitle: `Total spent: $${((data.totalActualCost || 0) / 1000000).toFixed(1)}M`,
     },
     {
       title: "Remaining",

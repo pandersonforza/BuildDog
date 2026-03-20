@@ -66,10 +66,23 @@ export async function GET(_request: NextRequest) {
       .sort((a, b) => b.totalBudget - a.totalBudget)
       .slice(0, 5);
 
+    // Calculate paid this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const paidThisMonth = await prisma.invoice.aggregate({
+      where: {
+        status: 'Paid',
+        paidDate: { gte: startOfMonth },
+      },
+      _sum: { amount: true },
+    });
+    const monthlyPaid = paidThisMonth._sum.amount ?? 0;
+
     const totalRemaining = totalBudget - totalSpent;
     const activeProjects = projectsByStatus["Active"] ?? 0;
 
     return NextResponse.json({
+      monthlyPaid,
       totalBudget,
       totalSpent,
       totalCommitted,
