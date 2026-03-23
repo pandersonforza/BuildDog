@@ -33,7 +33,7 @@ export function Logo({ size = "md", className }: LogoProps) {
         )}
       />
       <span className="italic">
-        <span className="text-foreground">Dirt</span><span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent pr-1">Dog</span>
+        <span className="text-foreground">Build</span><span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent pr-1">Dog</span>
       </span>
     </span>
   );

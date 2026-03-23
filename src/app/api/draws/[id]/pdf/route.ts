@@ -88,7 +88,7 @@ export async function GET(
     };
 
     // Header
-    addText('DirtDog', margin, y, { font: fontBold, size: 18, color: rgb(0.16, 0.6, 0.6) });
+    addText('BuildDog', margin, y, { font: fontBold, size: 18, color: rgb(0.16, 0.6, 0.6) });
     y -= 30;
 
     addText(`Draw Request #${draw.drawNumber}`, margin, y, { font: fontBold, size: 16 });
