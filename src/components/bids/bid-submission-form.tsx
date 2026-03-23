@@ -36,7 +36,25 @@ export function BidSubmissionForm({
   const [gcPhone, setGcPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: crypto.randomUUID(), description: "", amount: "", category: "" },
+    // AIA G702/G703 Standard Schedule of Values
+    { id: crypto.randomUUID(), description: "General Conditions", amount: "", category: "General" },
+    { id: crypto.randomUUID(), description: "Site Work / Earthwork", amount: "", category: "Site Work" },
+    { id: crypto.randomUUID(), description: "Concrete", amount: "", category: "Structure" },
+    { id: crypto.randomUUID(), description: "Masonry", amount: "", category: "Structure" },
+    { id: crypto.randomUUID(), description: "Metals / Structural Steel", amount: "", category: "Structure" },
+    { id: crypto.randomUUID(), description: "Wood & Plastics / Carpentry", amount: "", category: "Structure" },
+    { id: crypto.randomUUID(), description: "Thermal & Moisture Protection", amount: "", category: "Envelope" },
+    { id: crypto.randomUUID(), description: "Doors & Windows", amount: "", category: "Envelope" },
+    { id: crypto.randomUUID(), description: "Finishes", amount: "", category: "Finishes" },
+    { id: crypto.randomUUID(), description: "Specialties", amount: "", category: "Finishes" },
+    { id: crypto.randomUUID(), description: "Equipment", amount: "", category: "Equipment" },
+    { id: crypto.randomUUID(), description: "Furnishings", amount: "", category: "Equipment" },
+    { id: crypto.randomUUID(), description: "Special Construction", amount: "", category: "Special" },
+    { id: crypto.randomUUID(), description: "Conveying Systems (Elevators)", amount: "", category: "Special" },
+    { id: crypto.randomUUID(), description: "Mechanical / HVAC", amount: "", category: "MEP" },
+    { id: crypto.randomUUID(), description: "Plumbing", amount: "", category: "MEP" },
+    { id: crypto.randomUUID(), description: "Fire Protection", amount: "", category: "MEP" },
+    { id: crypto.randomUUID(), description: "Electrical", amount: "", category: "MEP" },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
