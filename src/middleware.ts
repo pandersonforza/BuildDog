@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionTokenFromCookie } from "@/lib/auth";
 
+const PUBLIC_PATHS = ["/login", "/register", "/bid/", "/api/auth", "/api/bids/invite"];
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Allow public paths without auth
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
   const token = getSessionTokenFromCookie(
     request.headers.get("cookie")
   );
@@ -16,6 +25,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|logo\\.svg|login|register|api/auth|bid|api/bids/invite).*)",
+    "/((?!_next/static|_next/image|favicon.ico|logo\\.svg).*)",
   ],
 };
