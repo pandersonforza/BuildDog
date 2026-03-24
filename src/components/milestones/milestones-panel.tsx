@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { MilestoneForm } from "./milestone-form";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Pencil, Trash2, CheckCircle2, Clock, CircleDashed } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, Clock, CircleDashed, Upload, Loader2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -54,6 +54,7 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
   const [editMilestone, setEditMilestone] = useState<Milestone | undefined>();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   const fetchMilestones = useCallback(async () => {
@@ -82,6 +83,74 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
       fetchMilestones();
     } catch {
       toast({ title: "Error", description: "Failed to delete milestone", variant: "destructive" });
+    }
+  };
+
+  const handleUploadAgreement = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/milestones/process", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to process agreement");
+      }
+
+      const data = await res.json();
+
+      if (!data.milestones || data.milestones.length === 0) {
+        toast({
+          title: "No milestones found",
+          description: data.notes || "The AI could not find milestone data in this document.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create all milestones from the parsed data
+      let created = 0;
+      for (let i = 0; i < data.milestones.length; i++) {
+        const m = data.milestones[i];
+        const createRes = await fetch("/api/milestones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            name: m.name,
+            description: m.description || null,
+            devFee: m.devFee || 0,
+            expectedDate: m.expectedDate || null,
+            status: "Pending",
+            sortOrder: i,
+          }),
+        });
+        if (createRes.ok) created++;
+      }
+
+      toast({
+        title: "Agreement processed",
+        description: `Created ${created} milestones from the dev agreement.${data.totalDevFee ? ` Total dev fee: ${formatCurrency(data.totalDevFee)}` : ""}`,
+      });
+
+      fetchMilestones();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to process agreement",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -227,15 +296,32 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Milestones</CardTitle>
-            <Button
-              onClick={() => {
-                setEditMilestone(undefined);
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Milestone
-            </Button>
+            <div className="flex items-center gap-2">
+              <label className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handleUploadAgreement}
+                  disabled={uploading}
+                />
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {uploading ? "Processing..." : "Upload Dev Agreement"}
+              </label>
+              <Button
+                onClick={() => {
+                  setEditMilestone(undefined);
+                  setFormOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Milestone
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
