@@ -125,42 +125,6 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Contracts */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Recent Contracts
-              <Link
-                href={`/projects/${projectId}/contracts`}
-                className="text-sm font-normal text-primary hover:underline"
-              >
-                View All
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {analytics?.recentContracts && analytics.recentContracts.length > 0 ? (
-              <div className="space-y-3">
-                {analytics.recentContracts.slice(0, 5).map((contract) => (
-                  <div key={contract.id} className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium">{contract.title}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {contract.vendor.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CurrencyDisplay amount={contract.amount} />
-                      <StatusBadge status={contract.status} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No contracts yet.</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
