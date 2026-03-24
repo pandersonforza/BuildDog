@@ -122,7 +122,7 @@ Required JSON structure:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      max_tokens: 16000,
       messages: [
         {
           role: 'user',
@@ -140,18 +140,33 @@ Required JSON structure:
     }
 
     let jsonText = textBlock.text.trim();
-    const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonText = jsonMatch[1].trim();
+
+    // Try multiple extraction strategies
+    // 1. Code block extraction
+    const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonText = codeBlockMatch[1].trim();
+    }
+
+    // 2. Find the JSON object boundaries if not already clean
+    if (!jsonText.startsWith('{')) {
+      const firstBrace = jsonText.indexOf('{');
+      const lastBrace = jsonText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+      }
     }
 
     let result: AIBudgetResult;
     try {
       result = JSON.parse(jsonText);
-    } catch {
-      console.error('Failed to parse AI response:', jsonText);
+    } catch (parseErr) {
+      console.error('Failed to parse AI response. Raw text length:', textBlock.text.length);
+      console.error('Stop reason:', response.stop_reason);
+      console.error('First 500 chars:', jsonText.substring(0, 500));
+      console.error('Last 500 chars:', jsonText.substring(jsonText.length - 500));
       return NextResponse.json(
-        { error: 'Failed to parse AI response as valid JSON.' },
+        { error: `Failed to parse AI response. Stop reason: ${response.stop_reason}. Text length: ${textBlock.text.length}` },
         { status: 502 }
       );
     }
