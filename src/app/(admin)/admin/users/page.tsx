@@ -278,6 +278,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 options={[
                   { value: "user", label: "User" },
+                  { value: "viewer", label: "Viewer" },
                   { value: "admin", label: "Admin" },
                 ]}
               />
