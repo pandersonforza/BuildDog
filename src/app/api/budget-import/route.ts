@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import * as XLSX from 'xlsx';
 
+export const maxDuration = 60;
+
 interface BudgetLineItemInput {
   description: string;
   originalBudget: number;
@@ -75,26 +77,28 @@ export async function POST(request: NextRequest) {
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const systemPrompt = `You are an expert real estate development budget analyst. You will be given spreadsheet data from a budget file. Your job is to analyze it and classify every line item into one of exactly four fixed categories.
+    const systemPrompt = `You are an expert real estate development budget analyst. You will be given spreadsheet data from a budget file. Your job is to analyze it and classify every line item into subcategories under the correct category group.
 
 The budget is for a real estate development project called "${project.name}" located at "${project.address}".
 
-There are exactly 4 categories. Every line item MUST go under one of these:
-1. "Hard Costs" (categoryGroup: "Hard Costs") — construction, site work, materials, labor, building costs, general conditions, etc.
-2. "Soft Costs" (categoryGroup: "Soft Costs") — architecture, engineering, permits, legal, insurance, development fees, consulting, contingency, etc.
-3. "Financing Costs" (categoryGroup: "Financing") — loan fees, interest, closing costs, loan reserves, etc.
-4. "Land & Acquisition" (categoryGroup: "Land") — land purchase, acquisition costs, earnest money, due diligence, etc.
+There are exactly 4 category groups. Every subcategory MUST belong to one of these groups:
+1. "Hard Costs" — typical subcategories: Building Costs, Site Costs, Equipment, Signage, General Conditions
+2. "Soft Costs" — typical subcategories: Design Fees, Third Party DD, Entitlements, Permits & Fees, Outside Costs
+3. "Financing" — typical subcategories: Loan Fees, Interest, Closing Costs
+4. "Land" — typical subcategories: Acquisition, Due Diligence
 
 Rules:
-- Do NOT create any categories other than the four listed above. Use the exact names and categoryGroups shown.
-- Place every line item under the most appropriate of the four categories.
+- The "categoryGroup" MUST be one of exactly: "Hard Costs", "Soft Costs", "Financing", "Land"
+- The "name" is the subcategory name (e.g. "Building Costs", "Site Costs", "Design Fees", etc.)
+- Use the suggested subcategory names above when they fit. You may create other subcategory names if the data clearly calls for it, but keep them under the correct group.
+- Place every line item under the most appropriate subcategory.
 - Each line item needs a description and a budget amount.
 - If the spreadsheet has both original and revised budgets, capture both. Otherwise set revisedBudget equal to originalBudget.
 - Ignore totals/subtotal rows — only include individual line items.
 - Ignore empty rows or rows that are clearly headers/labels without budget data.
 - If amounts appear negative, convert them to positive.
 - Parse dollar amounts correctly (remove $, commas, etc).
-- Only include categories that have at least one line item.
+- Only include subcategories that have at least one line item.
 
 Return ONLY valid JSON with no additional text or markdown formatting.
 
@@ -102,7 +106,7 @@ Required JSON structure:
 {
   "categories": [
     {
-      "name": "string - MUST be one of: Hard Costs, Soft Costs, Financing Costs, Land & Acquisition",
+      "name": "string - subcategory name (e.g. Building Costs, Design Fees, Loan Fees)",
       "categoryGroup": "string - MUST be one of: Hard Costs, Soft Costs, Financing, Land",
       "lineItems": [
         {

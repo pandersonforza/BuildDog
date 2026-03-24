@@ -214,7 +214,7 @@ export function BudgetImport({ open, onOpenChange, projectId, onSuccess }: Budge
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">
-                  {categories.length} categories, {totalLineItems} line items
+                  {categories.length} subcategories, {totalLineItems} line items
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Total Budget: {formatCurrency(totalBudget)}
