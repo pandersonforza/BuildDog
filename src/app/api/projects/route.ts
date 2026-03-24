@@ -24,12 +24,20 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    // Fetch projects with only the numeric fields needed for aggregation
     const projects = await prisma.project.findMany({
       where,
       include: {
         budgetCategories: {
-          include: {
-            lineItems: true,
+          select: {
+            lineItems: {
+              select: {
+                committedCost: true,
+                actualCost: true,
+                originalBudget: true,
+                revisedBudget: true,
+              },
+            },
           },
         },
       },

@@ -1,12 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { usePortfolioAnalytics } from "@/hooks/use-analytics";
 import { KPICards } from "@/components/dashboard/kpi-cards";
-import { ProjectStatusChart } from "@/components/dashboard/project-status-chart";
-import { ProjectSummaryTable } from "@/components/dashboard/project-summary-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PendingApprovals } from "@/components/dashboard/pending-approvals";
 import { TaskList } from "@/components/dashboard/task-list";
+
+// Lazy load chart-heavy components to reduce initial bundle
+const ProjectStatusChart = dynamic(
+  () => import("@/components/dashboard/project-status-chart").then((m) => ({ default: m.ProjectStatusChart })),
+  { loading: () => <Skeleton className="h-[350px]" /> }
+);
+const ProjectSummaryTable = dynamic(
+  () => import("@/components/dashboard/project-summary-table").then((m) => ({ default: m.ProjectSummaryTable })),
+  { loading: () => <Skeleton className="h-[300px]" /> }
+);
 
 export default function DashboardPage() {
   const { data, isLoading, error } = usePortfolioAnalytics();

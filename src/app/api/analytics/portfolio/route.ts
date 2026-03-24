@@ -3,21 +3,39 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(_request: NextRequest) {
   try {
-    const projects = await prisma.project.findMany({
-      include: {
-        budgetCategories: {
-          include: {
-            lineItems: true,
+    // Run queries in parallel for speed
+    const [projects, paidThisMonth] = await Promise.all([
+      prisma.project.findMany({
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          stage: true,
+          totalBudget: true,
+          budgetCategories: {
+            select: {
+              lineItems: {
+                select: {
+                  committedCost: true,
+                  revisedBudget: true,
+                },
+              },
+            },
+          },
+          invoices: {
+            where: { status: { in: ['Approved', 'Paid'] } },
+            select: { amount: true },
           },
         },
-        invoices: {
-          where: {
-            status: { in: ['Approved', 'Paid'] },
-          },
-          select: { amount: true, status: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          status: 'Paid',
+          paidDate: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
         },
-      },
-    });
+        _sum: { amount: true },
+      }),
+    ]);
 
     let totalBudget = 0;
     let totalSpent = 0;
@@ -37,9 +55,8 @@ export async function GET(_request: NextRequest) {
         }
       }
 
-      // Compute spent from actual approved/paid invoices
       const projectSpent = project.invoices.reduce(
-        (sum: number, inv: { amount: number }) => sum + inv.amount, 0
+        (sum, inv) => sum + inv.amount, 0
       );
 
       const budget = projectBudget > 0 ? projectBudget : project.totalBudget;
@@ -61,23 +78,11 @@ export async function GET(_request: NextRequest) {
       };
     });
 
-    // Top 5 projects by budget
     const topProjects = projectSummaries
       .sort((a, b) => b.totalBudget - a.totalBudget)
       .slice(0, 5);
 
-    // Calculate paid this month
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const paidThisMonth = await prisma.invoice.aggregate({
-      where: {
-        status: 'Paid',
-        paidDate: { gte: startOfMonth },
-      },
-      _sum: { amount: true },
-    });
     const monthlyPaid = paidThisMonth._sum.amount ?? 0;
-
     const totalRemaining = totalBudget - totalSpent;
     const activeProjects = projectsByStatus["Active"] ?? 0;
 

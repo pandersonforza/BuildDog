@@ -47,47 +47,69 @@ async function addBidToBudget(
     byCategory.get(cat)!.push({ description: li.description, amount: li.amount });
   }
 
-  for (const [categoryName, items] of byCategory) {
-    // Find or create the budget category
-    let category = await prisma.budgetCategory.findFirst({
-      where: { projectId, name: categoryName },
+  const categoryNames = [...byCategory.keys()];
+
+  // Batch fetch: get all existing budget categories for this project in one query
+  const existingCategories = await prisma.budgetCategory.findMany({
+    where: { projectId, name: { in: categoryNames } },
+    include: { lineItems: { select: { id: true, description: true, committedCost: true } } },
+  });
+
+  const categoryMap = new Map(existingCategories.map((c) => [c.name, c]));
+
+  // Create missing categories in batch
+  const missingNames = categoryNames.filter((n) => !categoryMap.has(n));
+  if (missingNames.length > 0) {
+    await prisma.budgetCategory.createMany({
+      data: missingNames.map((name) => ({
+        projectId,
+        name,
+        categoryGroup: "Hard Costs",
+      })),
     });
+    // Fetch the newly created categories
+    const newCats = await prisma.budgetCategory.findMany({
+      where: { projectId, name: { in: missingNames } },
+      include: { lineItems: { select: { id: true, description: true, committedCost: true } } },
+    });
+    for (const c of newCats) categoryMap.set(c.name, c);
+  }
 
-    if (!category) {
-      category = await prisma.budgetCategory.create({
-        data: {
-          projectId,
-          name: categoryName,
-          categoryGroup: "Hard Costs",
-        },
-      });
-    }
+  // Now process all line items with minimal queries using a transaction
+  const operations: Parameters<typeof prisma.$transaction>[0] = [];
 
-    // For each bid line item, find or create a matching budget line item
+  for (const [categoryName, items] of byCategory) {
+    const category = categoryMap.get(categoryName)!;
+    const lineItemMap = new Map(category.lineItems.map((li) => [li.description, li]));
+
     for (const item of items) {
-      const existing = await prisma.budgetLineItem.findFirst({
-        where: { categoryId: category.id, description: item.description },
-      });
-
+      const existing = lineItemMap.get(item.description);
       if (existing) {
-        // Add the bid amount to existing committed cost
-        await prisma.budgetLineItem.update({
-          where: { id: existing.id },
-          data: { committedCost: existing.committedCost + item.amount },
-        });
+        operations.push(
+          prisma.budgetLineItem.update({
+            where: { id: existing.id },
+            data: { committedCost: existing.committedCost + item.amount },
+          })
+        );
       } else {
-        // Create new budget line item with the bid amount as committed
-        await prisma.budgetLineItem.create({
-          data: {
-            categoryId: category.id,
-            description: item.description,
-            originalBudget: 0,
-            revisedBudget: 0,
-            committedCost: item.amount,
-            actualCost: 0,
-          },
-        });
+        operations.push(
+          prisma.budgetLineItem.create({
+            data: {
+              categoryId: category.id,
+              description: item.description,
+              originalBudget: 0,
+              revisedBudget: 0,
+              committedCost: item.amount,
+              actualCost: 0,
+            },
+          })
+        );
       }
     }
+  }
+
+  // Execute all updates/creates in a single transaction
+  if (operations.length > 0) {
+    await prisma.$transaction(operations);
   }
 }
