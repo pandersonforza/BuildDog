@@ -16,8 +16,18 @@ import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Project } from "@/types";
 
+interface ProjectWithAggregates extends Project {
+  aggregates?: {
+    totalRevisedBudget: number;
+    totalOriginalBudget: number;
+    totalCommitted: number;
+    totalSpent: number;
+    totalRemaining: number;
+  };
+}
+
 export function ProjectSummaryTable() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithAggregates[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -85,7 +95,7 @@ export function ProjectSummaryTable() {
                   <StatusBadge status={project.stage} type="stage" />
                 </TableCell>
                 <TableCell>
-                  <CurrencyDisplay amount={project.totalBudget} />
+                  <CurrencyDisplay amount={project.aggregates?.totalRevisedBudget || project.totalBudget} />
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={project.status} />
