@@ -195,6 +195,8 @@ export function TaskList() {
               {activeTasks.map((task) => {
                 const assignedByOther =
                   task.createdBy && task.createdBy.id !== currentUser?.id;
+                const assignedToOther =
+                  task.userId !== currentUser?.id && task.user;
                 return (
                   <div
                     key={task.id}
@@ -205,7 +207,8 @@ export function TaskList() {
                     <button
                       onClick={() => cycleStatus(task)}
                       className="shrink-0"
-                      title={`Status: ${task.status.replace("_", " ")}`}
+                      title={assignedToOther ? `Assigned to ${task.user.name} — only they can complete` : `Status: ${task.status.replace("_", " ")}`}
+                      disabled={!!assignedToOther}
                     >
                       {STATUS_ICONS[task.status]}
                     </button>
@@ -222,6 +225,11 @@ export function TaskList() {
                       {assignedByOther && (
                         <span className="text-xs text-muted-foreground ml-1.5">
                           from {task.createdBy!.name}
+                        </span>
+                      )}
+                      {assignedToOther && (
+                        <span className="text-xs text-primary/70 ml-1.5">
+                          → {task.user.name}
                         </span>
                       )}
                     </div>
