@@ -166,7 +166,7 @@ export async function PUT(
 
           if (isPayApp && existing.aiNotes) {
             // Distribute amounts to individual budget line items
-            const match = existing.aiNotes.match(/__payAppLineItems__(.+)$/s);
+            const match = existing.aiNotes.match(/__payAppLineItems__([\s\S]+)$/);
             if (match) {
               try {
                 const payAppItems: { lineItemId: string; amount: number }[] = JSON.parse(match[1]);
