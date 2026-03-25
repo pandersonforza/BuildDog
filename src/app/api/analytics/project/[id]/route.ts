@@ -89,20 +89,18 @@ export async function GET(
       }
 
       for (const item of category.lineItems) {
-        // Use the line item's actualCost field (editable by admin) as source of truth,
-        // falling back to invoice totals if actualCost is 0
-        const invoiceActual = invoiceSpentByLineItem[item.id] || 0;
-        const itemActualCost = item.actualCost > 0 ? item.actualCost : invoiceActual;
+        // Use the line item's actualCost field directly (editable by admin)
+        const itemActualCost = item.actualCost;
 
         categoryGroupMap[group].originalBudget += item.originalBudget;
         categoryGroupMap[group].revisedBudget += item.revisedBudget;
         categoryGroupMap[group].committed += item.committedCost;
         categoryGroupMap[group].spent += itemActualCost;
 
-        const variance = item.revisedBudget - itemActualCost - item.committedCost;
+        const variance = item.revisedBudget - itemActualCost;
         const percentUsed =
           item.revisedBudget > 0
-            ? ((itemActualCost + item.committedCost) / item.revisedBudget) * 100
+            ? (itemActualCost / item.revisedBudget) * 100
             : 0;
 
         varianceByLineItem.push({
@@ -165,7 +163,7 @@ export async function GET(
         catOriginal += item.originalBudget;
         catRevised += item.revisedBudget;
         catCommitted += item.committedCost;
-        catActual += invoiceSpentByLineItem[item.id] || 0;
+        catActual += item.actualCost;
       }
 
       totalOriginalBudget += catOriginal;
@@ -173,7 +171,7 @@ export async function GET(
       totalCommittedCost += catCommitted;
       totalActualCost += catActual;
 
-      const catVariance = catRevised - catActual - catCommitted;
+      const catVariance = catRevised - catActual;
       const catVariancePercent = catRevised > 0 ? (catVariance / catRevised) * 100 : 0;
 
       return {
@@ -190,10 +188,7 @@ export async function GET(
       };
     });
 
-    // Include unlinked invoice spend in totals
-    totalActualCost += unlinkedSpent;
-
-    const totalVariance = totalRevisedBudget - totalActualCost - totalCommittedCost;
+    const totalVariance = totalRevisedBudget - totalActualCost;
     const totalVariancePercent = totalRevisedBudget > 0 ? (totalVariance / totalRevisedBudget) * 100 : 0;
     const percentComplete = totalRevisedBudget > 0 ? (totalActualCost / totalRevisedBudget) * 100 : 0;
 
