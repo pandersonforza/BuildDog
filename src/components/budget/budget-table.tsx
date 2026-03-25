@@ -200,7 +200,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                     <TableCell className="text-right">{formatCurrency(totals.revised)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(totals.actual)}</TableCell>
                     <TableCell className="text-right">
-                      <CurrencyDisplay amount={totals.variance} showVariance baseAmount={0} />
+                      <CurrencyDisplay amount={totals.variance}  />
                     </TableCell>
                     <TableCell className="text-right">{formatPercent(totals.pct)}</TableCell>
                     <TableCell />
@@ -239,7 +239,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                             <TableCell className="text-right">{formatCurrency(catRevised)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(catActual)}</TableCell>
                             <TableCell className="text-right">
-                              <CurrencyDisplay amount={catRemaining} showVariance baseAmount={0} />
+                              <CurrencyDisplay amount={catRemaining}  />
                             </TableCell>
                             <TableCell className="text-right">{formatPercent(catPct)}</TableCell>
                             <TableCell>
@@ -286,7 +286,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                                   <TableCell className="text-right">{formatCurrency(li.revisedBudget)}</TableCell>
                                   <TableCell className="text-right">{formatCurrency(li.actualCost)}</TableCell>
                                   <TableCell className="text-right">
-                                    <CurrencyDisplay amount={variance} showVariance baseAmount={0} />
+                                    <CurrencyDisplay amount={variance}  />
                                   </TableCell>
                                   <TableCell className="text-right">{formatPercent(pct)}</TableCell>
                                   <TableCell>
@@ -348,7 +348,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                   <TableCell className="text-right">{formatCurrency(totalRevised)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(totalActual)}</TableCell>
                   <TableCell className="text-right">
-                    <CurrencyDisplay amount={totalRemaining} showVariance baseAmount={0} />
+                    <CurrencyDisplay amount={totalRemaining}  />
                   </TableCell>
                   <TableCell className="text-right">{formatPercent(totalPct)}</TableCell>
                   <TableCell />
