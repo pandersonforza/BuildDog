@@ -80,7 +80,7 @@ export default function MilestonesOverviewPage() {
       <h1 className="text-3xl font-bold">Milestones Overview</h1>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Total Expected Fees</p>
