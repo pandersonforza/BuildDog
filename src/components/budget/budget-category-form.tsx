@@ -14,10 +14,18 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { CATEGORY_GROUPS, DEFAULT_SUBCATEGORIES } from "@/lib/constants";
 
+interface EditCategory {
+  id: string;
+  name: string;
+  categoryGroup: string;
+}
+
 interface BudgetCategoryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  category?: EditCategory;
+  defaultGroup?: string;
   onSuccess: () => void;
 }
 
@@ -25,6 +33,8 @@ export function BudgetCategoryForm({
   open,
   onOpenChange,
   projectId,
+  category,
+  defaultGroup,
   onSuccess,
 }: BudgetCategoryFormProps) {
   const { toast } = useToast();
@@ -32,12 +42,19 @@ export function BudgetCategoryForm({
   const [name, setName] = useState("");
   const [categoryGroup, setCategoryGroup] = useState<string>(CATEGORY_GROUPS[0]);
 
+  const isEditing = !!category;
+
   useEffect(() => {
     if (open) {
-      setName("");
-      setCategoryGroup(CATEGORY_GROUPS[0]);
+      if (category) {
+        setName(category.name);
+        setCategoryGroup(category.categoryGroup);
+      } else {
+        setName("");
+        setCategoryGroup(defaultGroup || CATEGORY_GROUPS[0]);
+      }
     }
-  }, [open]);
+  }, [open, category, defaultGroup]);
 
   const suggestions = DEFAULT_SUBCATEGORIES[categoryGroup] || [];
 
@@ -45,17 +62,27 @@ export function BudgetCategoryForm({
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/budget-categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, name, categoryGroup }),
-      });
-      if (!res.ok) throw new Error("Failed to create category");
-      toast({ title: "Subcategory created" });
+      if (isEditing) {
+        const res = await fetch(`/api/budget-categories/${category.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, categoryGroup }),
+        });
+        if (!res.ok) throw new Error("Failed to update category");
+        toast({ title: "Subcategory updated" });
+      } else {
+        const res = await fetch("/api/budget-categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, name, categoryGroup }),
+        });
+        if (!res.ok) throw new Error("Failed to create category");
+        toast({ title: "Subcategory created" });
+      }
       onSuccess();
       onOpenChange(false);
     } catch {
-      toast({ title: "Error", description: "Failed to create subcategory", variant: "destructive" });
+      toast({ title: "Error", description: `Failed to ${isEditing ? "update" : "create"} subcategory`, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -65,7 +92,7 @@ export function BudgetCategoryForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Budget Subcategory</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit" : "Add"} Budget Subcategory</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -114,7 +141,7 @@ export function BudgetCategoryForm({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create"}
+              {loading ? (isEditing ? "Saving..." : "Creating...") : (isEditing ? "Save" : "Create")}
             </Button>
           </DialogFooter>
         </form>

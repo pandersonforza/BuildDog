@@ -48,6 +48,8 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
     new Set(CATEGORY_GROUPS)
   );
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState<{ id: string; name: string; categoryGroup: string } | undefined>();
+  const [defaultCategoryGroup, setDefaultCategoryGroup] = useState<string | undefined>();
   const [lineItemFormOpen, setLineItemFormOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [editLineItem, setEditLineItem] = useState<BudgetLineItem | undefined>();
@@ -203,7 +205,23 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                       <CurrencyDisplay amount={totals.variance}  />
                     </TableCell>
                     <TableCell className="text-right">{formatPercent(totals.pct)}</TableCell>
-                    <TableCell />
+                    <TableCell>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setEditCategory(undefined);
+                            setDefaultCategoryGroup(group);
+                            setCategoryFormOpen(true);
+                          }}
+                          title="Add subcategory"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
 
                   {/* Subcategories under this group */}
@@ -257,6 +275,23 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                                     title="Add line item"
                                   >
                                     <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => {
+                                      setEditCategory({
+                                        id: category.id,
+                                        name: category.name,
+                                        categoryGroup: category.categoryGroup || group,
+                                      });
+                                      setDefaultCategoryGroup(undefined);
+                                      setCategoryFormOpen(true);
+                                    }}
+                                    title="Edit subcategory"
+                                  >
+                                    <Pencil className="h-3 w-3" />
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -361,8 +396,16 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
 
       <BudgetCategoryForm
         open={categoryFormOpen}
-        onOpenChange={setCategoryFormOpen}
+        onOpenChange={(open) => {
+          setCategoryFormOpen(open);
+          if (!open) {
+            setEditCategory(undefined);
+            setDefaultCategoryGroup(undefined);
+          }
+        }}
         projectId={projectId}
+        category={editCategory}
+        defaultGroup={defaultCategoryGroup}
         onSuccess={onMutate}
       />
 
