@@ -63,10 +63,6 @@ export default function ProjectDetailPage() {
             {analytics?.budgetSummary ? (
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Original Budget</span>
-                  <CurrencyDisplay amount={analytics.budgetSummary.originalBudget} />
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">Current Budget</span>
                   <CurrencyDisplay amount={analytics.budgetSummary.revisedBudget} />
                 </div>
