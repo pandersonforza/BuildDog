@@ -86,7 +86,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
             revised,
             committed,
             actual,
-            variance: actual - revised,
+            variance: revised - actual,
             pct: revised > 0 ? (actual / revised) * 100 : 0,
           },
         };
@@ -133,7 +133,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
               <TableHead className="text-right">Original</TableHead>
               <TableHead className="text-right">Current</TableHead>
               <TableHead className="text-right">Actual</TableHead>
-              <TableHead className="text-right">Variance</TableHead>
+              <TableHead className="text-right">Remaining</TableHead>
               <TableHead className="text-right">%</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
@@ -182,7 +182,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                       const catRevised = category.lineItems.reduce((s, li) => s + li.revisedBudget, 0);
                       const catCommitted = category.lineItems.reduce((s, li) => s + li.committedCost, 0);
                       const catActual = category.lineItems.reduce((s, li) => s + li.actualCost, 0);
-                      const catVariance = catActual - catRevised;
+                      const catRemaining = catRevised - catActual;
                       const catPct = catRevised > 0 ? (catActual / catRevised) * 100 : 0;
 
                       return (
@@ -207,7 +207,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                             <TableCell className="text-right">{formatCurrency(catRevised)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(catActual)}</TableCell>
                             <TableCell className="text-right">
-                              <CurrencyDisplay amount={catVariance} showVariance baseAmount={0} />
+                              <CurrencyDisplay amount={catRemaining} showVariance baseAmount={0} />
                             </TableCell>
                             <TableCell className="text-right">{formatPercent(catPct)}</TableCell>
                             <TableCell>
@@ -245,7 +245,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                           {/* Line Item Rows */}
                           {isExpanded &&
                             category.lineItems.map((li) => {
-                              const variance = li.actualCost - li.revisedBudget;
+                              const variance = li.revisedBudget - li.actualCost;
                               const pct = li.revisedBudget > 0 ? (li.actualCost / li.revisedBudget) * 100 : 0;
                               return (
                                 <TableRow key={li.id} className="hover:bg-muted/30">
@@ -307,7 +307,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
               const totalRevised = categories.reduce((s, c) => s + c.lineItems.reduce((a, li) => a + li.revisedBudget, 0), 0);
               const totalCommitted = categories.reduce((s, c) => s + c.lineItems.reduce((a, li) => a + li.committedCost, 0), 0);
               const totalActual = categories.reduce((s, c) => s + c.lineItems.reduce((a, li) => a + li.actualCost, 0), 0);
-              const totalVariance = totalActual - totalRevised;
+              const totalRemaining = totalRevised - totalActual;
               const totalPct = totalRevised > 0 ? (totalActual / totalRevised) * 100 : 0;
               return (
                 <TableRow className="bg-muted font-bold border-t-2 border-border">
@@ -316,7 +316,7 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
                   <TableCell className="text-right">{formatCurrency(totalRevised)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(totalActual)}</TableCell>
                   <TableCell className="text-right">
-                    <CurrencyDisplay amount={totalVariance} showVariance baseAmount={0} />
+                    <CurrencyDisplay amount={totalRemaining} showVariance baseAmount={0} />
                   </TableCell>
                   <TableCell className="text-right">{formatPercent(totalPct)}</TableCell>
                   <TableCell />

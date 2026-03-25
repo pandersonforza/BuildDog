@@ -16,7 +16,7 @@ export function exportBudgetToExcel(
       "Original Budget": "",
       "Current Budget": "",
       "Actual Cost": "",
-      Variance: "",
+      Remaining: "",
     });
 
     for (const li of category.lineItems) {
@@ -27,7 +27,7 @@ export function exportBudgetToExcel(
         "Original Budget": li.originalBudget,
         "Current Budget": li.revisedBudget,
         "Actual Cost": li.actualCost,
-        Variance: li.actualCost - li.revisedBudget,
+        Remaining: li.revisedBudget - li.actualCost,
       });
     }
   }
@@ -44,7 +44,7 @@ export function exportBudgetToExcel(
     "Original Budget": totalOriginal,
     "Current Budget": totalRevised,
     "Actual Cost": totalActual,
-    Variance: totalActual - totalRevised,
+    Remaining: totalRevised - totalActual,
   });
 
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -57,7 +57,7 @@ export function exportBudgetToExcel(
     { wch: 16 }, // Original Budget
     { wch: 16 }, // Current Budget
     { wch: 16 }, // Actual Cost
-    { wch: 16 }, // Variance
+    { wch: 16 }, // Remaining
   ];
 
   const wb = XLSX.utils.book_new();
