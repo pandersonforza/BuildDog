@@ -28,11 +28,7 @@ export function BudgetOverview({ summary }: BudgetOverviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {card.isRemaining ? (
-                <CurrencyDisplay amount={card.amount} showVariance baseAmount={0} size="lg" />
-              ) : (
-                <CurrencyDisplay amount={card.amount} size="lg" />
-              )}
+              <CurrencyDisplay amount={card.amount} size="lg" />
             </CardContent>
           </Card>
         ))}
