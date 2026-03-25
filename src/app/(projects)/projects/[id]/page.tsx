@@ -67,23 +67,17 @@ export default function ProjectDetailPage() {
                   <CurrencyDisplay amount={analytics.budgetSummary.originalBudget} />
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Revised Budget</span>
+                  <span className="text-muted-foreground">Current Budget</span>
                   <CurrencyDisplay amount={analytics.budgetSummary.revisedBudget} />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Committed</span>
-                  <CurrencyDisplay amount={analytics.budgetSummary.committedCost} />
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Actual Cost</span>
                   <CurrencyDisplay amount={analytics.budgetSummary.actualCost} />
                 </div>
                 <div className="border-t border-border pt-2 flex justify-between font-medium">
-                  <span>Variance</span>
+                  <span>Remaining</span>
                   <CurrencyDisplay
-                    amount={analytics.budgetSummary.variance}
-                    showVariance
-                    baseAmount={0}
+                    amount={analytics.budgetSummary.revisedBudget - analytics.budgetSummary.actualCost}
                   />
                 </div>
               </div>
