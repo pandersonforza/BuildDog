@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import { Plus, ExternalLink, Trash2, DollarSign, FileText } from "lucide-react";
+import { Plus, ExternalLink, Trash2, DollarSign, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { InvoiceWithRelations } from "@/types";
 
@@ -55,6 +55,7 @@ export function InvoiceList({
     amount: "",
     description: "",
   });
+  const [payAppItemsOpen, setPayAppItemsOpen] = useState(false);
   const { toast } = useToast();
   const { user, canEdit } = useAuth();
 
@@ -433,6 +434,54 @@ export function InvoiceList({
               View Attached Invoice PDF
             </a>
           )}
+          {/* Pay App line items breakdown */}
+          {(() => {
+            const notes = approvingInvoice?.aiNotes || "";
+            const match = notes.match(/__payAppLineItems__([\s\S]+)$/);
+            if (!match) return null;
+            let payItems: { lineItemId: string; description: string; amount: number }[] = [];
+            try { payItems = JSON.parse(match[1]); } catch { return null; }
+            if (payItems.length === 0) return null;
+            return (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setPayAppItemsOpen(!payAppItemsOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <span>Pay App Line Items ({payItems.length})</span>
+                  {payAppItemsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {payAppItemsOpen && (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-t border-border bg-muted/20 text-left text-muted-foreground">
+                        <th className="py-1.5 px-3">Description</th>
+                        <th className="py-1.5 px-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payItems.map((item, idx) => (
+                        <tr key={idx} className="border-t border-border/50">
+                          <td className="py-1.5 px-3">{item.description}</td>
+                          <td className="py-1.5 px-3 text-right">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-primary/20 font-semibold">
+                        <td className="py-1.5 px-3">Total</td>
+                        <td className="py-1.5 px-3 text-right text-primary">
+                          ${payItems.reduce((s, i) => s + i.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )}
+              </div>
+            );
+          })()}
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="approve-vendor">Vendor Name</Label>
