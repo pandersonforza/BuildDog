@@ -218,48 +218,61 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     setStep("saving");
 
     try {
-      let created = 0;
       const approverUser = users.find((u) => u.id === approverId);
 
-      for (const li of itemsWithAmounts) {
-        const body: Record<string, unknown> = {
-          vendorName: gcCompany.trim(),
-          invoiceNumber: appNumber ? `PA-${appNumber}-${created + 1}` : null,
-          amount: li.currentAmount,
-          date: periodTo,
-          description: li.description,
-          projectId: projectId || null,
-          budgetLineItemId: li.lineItemId || null,
-          aiNotes: `Pay App entry: ${li.description}. Budget: ${formatCurrency(li.budget)}, Previously billed: ${formatCurrency(li.previouslyBilled)}, This period: ${formatCurrency(li.currentAmount)}.`,
-        };
+      // Build line item breakdown for the description
+      const lineBreakdown = itemsWithAmounts
+        .map((li) => `${li.description}: ${formatCurrency(li.currentAmount)}`)
+        .join("\n");
 
-        if (submitForApproval) {
-          body.status = "Submitted";
-          body.approver = approverUser?.name ?? "";
-          body.approverId = approverId;
-          body.submittedBy = user?.name ?? "";
-          body.submittedById = user?.id ?? null;
-          body.submittedDate = new Date().toISOString();
-        }
+      // Store line item IDs and amounts as JSON for budget distribution on approval
+      const payAppLineItems = itemsWithAmounts.map((li) => ({
+        lineItemId: li.lineItemId,
+        description: li.description,
+        amount: li.currentAmount,
+      }));
 
-        const res = await fetch("/api/invoices", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (res.ok) created++;
+      const body: Record<string, unknown> = {
+        vendorName: gcCompany.trim(),
+        invoiceNumber: appNumber ? `PA-${appNumber}` : null,
+        amount: totalCurrentBilled,
+        date: periodTo,
+        description: `Pay Application${appNumber ? ` #${appNumber}` : ""} - ${itemsWithAmounts.length} line items`,
+        projectId: projectId || null,
+        budgetLineItemId: null,
+        aiNotes: `Pay App Line Items:\n${lineBreakdown}\n\n__payAppLineItems__${JSON.stringify(payAppLineItems)}`,
+      };
+
+      if (submitForApproval) {
+        body.status = "Submitted";
+        body.approver = approverUser?.name ?? "";
+        body.approverId = approverId;
+        body.submittedBy = user?.name ?? "";
+        body.submittedById = user?.id ?? null;
+        body.submittedDate = new Date().toISOString();
+      }
+
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to create pay app");
       }
 
       toast({
-        title: submitForApproval ? "Pay app submitted for approval" : "Pay app invoices created",
-        description: `Created ${created} invoice${created !== 1 ? "s" : ""} totaling ${formatCurrency(totalCurrentBilled)}`,
+        title: submitForApproval ? "Pay app submitted for approval" : "Pay app created",
+        description: `${formatCurrency(totalCurrentBilled)} across ${itemsWithAmounts.length} line items`,
       });
       onSuccess();
       handleOpenChange(false);
     } catch (err) {
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to save invoices",
+        description: err instanceof Error ? err.message : "Failed to save pay app",
         variant: "destructive",
       });
       setStep("form");

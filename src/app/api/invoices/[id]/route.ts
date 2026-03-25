@@ -103,7 +103,9 @@ export async function PUT(
             { status: 400 }
           );
         }
-        if (!budgetLineItemId) {
+        // Pay app invoices don't need a single budget line item — they distribute across multiple
+        const isPayApp = existing.aiNotes?.includes('__payAppLineItems__');
+        if (!budgetLineItemId && !isPayApp) {
           return NextResponse.json(
             { error: 'Budget line item must be assigned before submitting' },
             { status: 400 }
@@ -134,7 +136,10 @@ export async function PUT(
         const finalAmount = body.amount !== undefined ? body.amount : existing.amount;
         const finalLineItemId = body.budgetLineItemId !== undefined ? body.budgetLineItemId : existing.budgetLineItemId;
 
-        if (!finalLineItemId) {
+        // Check if this is a pay app with multiple line items
+        const isPayApp = existing.aiNotes?.includes('__payAppLineItems__');
+
+        if (!finalLineItemId && !isPayApp) {
           return NextResponse.json(
             { error: 'Invoice must have a budget line item to be approved' },
             { status: 400 }
@@ -159,12 +164,33 @@ export async function PUT(
             },
           });
 
-          await tx.budgetLineItem.update({
-            where: { id: finalLineItemId },
-            data: {
-              actualCost: { increment: finalAmount },
-            },
-          });
+          if (isPayApp && existing.aiNotes) {
+            // Distribute amounts to individual budget line items
+            const match = existing.aiNotes.match(/__payAppLineItems__(.+)$/s);
+            if (match) {
+              try {
+                const payAppItems: { lineItemId: string; amount: number }[] = JSON.parse(match[1]);
+                for (const item of payAppItems) {
+                  if (item.lineItemId && item.amount > 0) {
+                    await tx.budgetLineItem.update({
+                      where: { id: item.lineItemId },
+                      data: { actualCost: { increment: item.amount } },
+                    });
+                  }
+                }
+              } catch {
+                // If parsing fails, skip distribution
+                console.error('Failed to parse pay app line items');
+              }
+            }
+          } else if (finalLineItemId) {
+            await tx.budgetLineItem.update({
+              where: { id: finalLineItemId },
+              data: {
+                actualCost: { increment: finalAmount },
+              },
+            });
+          }
 
           return updated;
         });
