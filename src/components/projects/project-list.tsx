@@ -189,8 +189,8 @@ export function ProjectList({ projects, onMutate }: ProjectListProps) {
       <DataTable
         columns={columns}
         data={tab === "active" ? activeProjects : tab === "completed" ? completedProjects : tab === "onhold" ? onHoldProjects : deadProjects}
-        searchKey="name"
-        searchPlaceholder="Search projects..."
+        searchKeys={["name", "address"]}
+        searchPlaceholder="Search by name or address..."
       />
 
       <ProjectForm

@@ -28,6 +28,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey?: string;
+  searchKeys?: string[];
   searchPlaceholder?: string;
 }
 
@@ -35,13 +36,30 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
+  searchKeys,
   searchPlaceholder = "Search...",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
+  const [globalFilter, setGlobalFilter] = React.useState("");
   const [pageSize, setPageSize] = React.useState(10);
+
+  const multiSearchKeys = searchKeys || (searchKey ? [searchKey] : []);
+  const useGlobalSearch = multiSearchKeys.length > 1;
+
+  const globalFilterFn = React.useCallback(
+    (row: { getValue: (id: string) => unknown }, _columnId: string, filterValue: string) => {
+      if (!filterValue) return true;
+      const search = filterValue.toLowerCase();
+      return multiSearchKeys.some((key) => {
+        const val = row.getValue(key);
+        return val != null && String(val).toLowerCase().includes(search);
+      });
+    },
+    [multiSearchKeys]
+  );
 
   const table = useReactTable({
     data,
@@ -52,9 +70,14 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    ...(useGlobalSearch && {
+      globalFilterFn,
+      onGlobalFilterChange: setGlobalFilter,
+    }),
     state: {
       sorting,
       columnFilters,
+      ...(useGlobalSearch && { globalFilter }),
       pagination: {
         pageIndex: 0,
         pageSize,
@@ -65,19 +88,25 @@ export function DataTable<TData, TValue>({
   // Reset to first page on filter/pageSize change
   React.useEffect(() => {
     table.setPageIndex(0);
-  }, [columnFilters, pageSize, table]);
+  }, [columnFilters, globalFilter, pageSize, table]);
+
+  const hasSearch = multiSearchKeys.length > 0;
 
   return (
     <div className="space-y-4">
-      {searchKey && (
+      {hasSearch && (
         <div className="flex items-center gap-2">
           <Input
             placeholder={searchPlaceholder}
             value={
-              (table.getColumn(searchKey)?.getFilterValue() as string) ?? ""
+              useGlobalSearch
+                ? globalFilter
+                : (table.getColumn(multiSearchKeys[0])?.getFilterValue() as string) ?? ""
             }
             onChange={(event) =>
-              table.getColumn(searchKey)?.setFilterValue(event.target.value)
+              useGlobalSearch
+                ? setGlobalFilter(event.target.value)
+                : table.getColumn(multiSearchKeys[0])?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
           />
