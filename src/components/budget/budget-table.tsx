@@ -64,14 +64,17 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
       const group = cat.categoryGroup || "Other";
       if (!map.has(group)) map.set(group, []);
       // Sort line items by the defined order, unknowns go to end
-      const order = LINE_ITEM_ORDER[cat.name] || [];
+      // Find matching order list by case-insensitive category name
+      const orderKey = Object.keys(LINE_ITEM_ORDER).find(
+        (k) => k.trim().toLowerCase() === cat.name.trim().toLowerCase()
+      );
+      const order = orderKey ? LINE_ITEM_ORDER[orderKey] : [];
+      const orderLower = order.map((s) => s.trim().toLowerCase());
       const sortedCat = {
         ...cat,
         lineItems: [...cat.lineItems].sort((a, b) => {
-          const idxA = order.indexOf(a.description);
-          const idxB = order.indexOf(b.description);
-          // Items in the order list sort by their position
-          // Items not in the list sort to the end by creation date
+          const idxA = orderLower.indexOf(a.description.trim().toLowerCase());
+          const idxB = orderLower.indexOf(b.description.trim().toLowerCase());
           if (idxA !== -1 && idxB !== -1) return idxA - idxB;
           if (idxA !== -1) return -1;
           if (idxB !== -1) return 1;
@@ -95,9 +98,10 @@ export function BudgetTable({ projectId, categories, onMutate }: BudgetTableProp
         const cats = map.get(group)!;
         // Sort subcategories by defined order, unknowns to end
         const subOrder = SUBCATEGORY_ORDER[group] || [];
+        const subOrderLower = subOrder.map((s) => s.trim().toLowerCase());
         cats.sort((a, b) => {
-          const idxA = subOrder.indexOf(a.name);
-          const idxB = subOrder.indexOf(b.name);
+          const idxA = subOrderLower.indexOf(a.name.trim().toLowerCase());
+          const idxB = subOrderLower.indexOf(b.name.trim().toLowerCase());
           if (idxA !== -1 && idxB !== -1) return idxA - idxB;
           if (idxA !== -1) return -1;
           if (idxB !== -1) return 1;
