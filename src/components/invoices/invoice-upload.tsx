@@ -730,28 +730,30 @@ export function InvoiceUpload({
               />
             </div>
 
-            {/* AI Suggested Project */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="project">Project</Label>
-                {aiResult.suggestedProjectName && (
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs text-muted-foreground">
-                      AI suggested: {aiResult.suggestedProjectName}
-                    </span>
-                    {confidenceBadge(aiResult.confidence)}
-                  </div>
-                )}
+            {/* Project selector — only shown if not already in a project context */}
+            {!projectId && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="project">Project</Label>
+                  {aiResult.suggestedProjectName && (
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs text-muted-foreground">
+                        AI suggested: {aiResult.suggestedProjectName}
+                      </span>
+                      {confidenceBadge(aiResult.confidence)}
+                    </div>
+                  )}
+                </div>
+                <SelectNative
+                  id="project"
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  placeholder="Select a project"
+                  options={projectOptions}
+                />
               </div>
-              <SelectNative
-                id="project"
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                placeholder="Select a project"
-                options={projectOptions}
-              />
-            </div>
+            )}
 
             {/* AI Suggested Line Item */}
             <div className="space-y-2">
@@ -793,11 +795,11 @@ export function InvoiceUpload({
                     options={lineItemOptions}
                   />
                 )
-              ) : (
+              ) : !selectedProjectId ? (
                 <p className="text-sm text-muted-foreground">
                   Select a project first to choose a line item
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Approval Workflow */}
