@@ -48,7 +48,9 @@ export function InvoiceUpload({
   const [step, setStep] = useState<UploadStep>("upload");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileQueue, setFileQueue] = useState<File[]>([]);
+  const fileQueueRef = useRef<File[]>([]);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const currentFileIndexRef = useRef(0);
   const [totalFiles, setTotalFiles] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -81,7 +83,9 @@ export function InvoiceUpload({
         setStep("upload");
         setSelectedFile(null);
         setFileQueue([]);
+        fileQueueRef.current = [];
         setCurrentFileIndex(0);
+        currentFileIndexRef.current = 0;
         setTotalFiles(0);
         setAiResult(null);
         setMultiInvoices([]);
@@ -181,8 +185,10 @@ export function InvoiceUpload({
       return;
     }
     setFileQueue(pdfs);
+    fileQueueRef.current = pdfs;
     setTotalFiles(pdfs.length);
     setCurrentFileIndex(0);
+    currentFileIndexRef.current = 0;
     setSelectedFile(pdfs[0]);
   };
 
@@ -360,10 +366,13 @@ export function InvoiceUpload({
       onSuccess();
 
       // If more files in queue, advance to next
-      const nextIndex = currentFileIndex + 1;
-      if (nextIndex < fileQueue.length) {
+      const nextIndex = currentFileIndexRef.current + 1;
+      const queue = fileQueueRef.current;
+      if (nextIndex < queue.length) {
+        currentFileIndexRef.current = nextIndex;
         setCurrentFileIndex(nextIndex);
-        setSelectedFile(fileQueue[nextIndex]);
+        const nextFile = queue[nextIndex];
+        setSelectedFile(nextFile);
         setAiResult(null);
         setFilePath("");
         setVendorName("");
@@ -373,11 +382,9 @@ export function InvoiceUpload({
         setDescription("");
         setSelectedLineItemId("");
         // Keep projectId, approverId, submittedBy for convenience
-        setStep("upload");
-        // Auto-start processing the next file
-        setTimeout(() => {
-          processFile(fileQueue[nextIndex]);
-        }, 300);
+        // Skip back to upload step briefly, then auto-process
+        setStep("processing");
+        processFile(nextFile);
       } else {
         handleOpenChange(false);
       }
