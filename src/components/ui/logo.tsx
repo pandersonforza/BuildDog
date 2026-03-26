@@ -72,7 +72,7 @@ export function Logo({ size = "md", className }: LogoProps) {
     >
       <DogHouseIcon className={cn("text-teal-500 shrink-0", iconSize[size])} />
       <span className="italic">
-        <span className="text-foreground">Dog</span><span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent pr-1">House</span>
+        <span className="text-foreground">Prop</span><span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent pr-1">Hound</span>
       </span>
     </span>
   );
