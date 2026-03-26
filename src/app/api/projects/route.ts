@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
         endDate: body.endDate ? new Date(body.endDate) : null,
         totalBudget: body.totalBudget ?? 0,
         projectManager,
+        projectGroup: body.projectGroup ?? 'Forza',
         description: body.description ?? null,
         budgetCategories: {
           create: [

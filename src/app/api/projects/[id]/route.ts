@@ -83,6 +83,7 @@ export async function PUT(
         ...(body.totalBudget !== undefined && { totalBudget: body.totalBudget }),
         ...(body.projectManager !== undefined && { projectManager: body.projectManager }),
         ...(body.description !== undefined && { description: body.description }),
+        ...(body.projectGroup !== undefined && { projectGroup: body.projectGroup }),
         // Track record fields
         ...(body.completionDate !== undefined && { completionDate: body.completionDate ? new Date(body.completionDate) : null }),
         ...(body.finalBudget !== undefined && { finalBudget: body.finalBudget }),
