@@ -404,6 +404,7 @@ export function InvoiceUpload({
 
     try {
       let created = 0;
+      const dupeWarnings: string[] = [];
       const approverUser = users.find((u) => u.id === approverId);
 
       for (const inv of allInvoices) {
@@ -437,20 +438,27 @@ export function InvoiceUpload({
 
         if (res.status === 409) {
           const dupeData = await res.json();
-          const proceed = window.confirm(
-            `${dupeData.message}\n\nDo you want to submit it anyway?`
-          );
-          if (proceed) {
-            const retryRes = await fetch("/api/invoices", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
-            });
-            if (retryRes.ok) created++;
+          // Auto-proceed but warn the user
+          const retryRes = await fetch("/api/invoices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
+          });
+          if (retryRes.ok) {
+            created++;
+            dupeWarnings.push(dupeData.message);
           }
         } else if (res.ok) {
           created++;
         }
+      }
+
+      if (dupeWarnings.length > 0) {
+        toast({
+          title: "⚠️ Possible duplicates detected",
+          description: dupeWarnings.join("; "),
+          variant: "destructive",
+        });
       }
 
       toast({
@@ -486,6 +494,7 @@ export function InvoiceUpload({
     setStep("saving");
     try {
       let created = 0;
+      const dupeWarnings: string[] = [];
       const approverUser = users.find((u) => u.id === approverId);
 
       for (const inv of selected) {
@@ -519,20 +528,26 @@ export function InvoiceUpload({
 
         if (res.status === 409) {
           const dupeData = await res.json();
-          const proceed = window.confirm(
-            `${dupeData.message}\n\nDo you want to submit it anyway?`
-          );
-          if (proceed) {
-            const retryRes = await fetch("/api/invoices", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
-            });
-            if (retryRes.ok) created++;
+          const retryRes = await fetch("/api/invoices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...body, skipDuplicateCheck: true }),
+          });
+          if (retryRes.ok) {
+            created++;
+            dupeWarnings.push(dupeData.message);
           }
         } else if (res.ok) {
           created++;
         }
+      }
+
+      if (dupeWarnings.length > 0) {
+        toast({
+          title: "⚠️ Possible duplicates detected",
+          description: dupeWarnings.join("; "),
+          variant: "destructive",
+        });
       }
 
       toast({

@@ -266,13 +266,11 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
 
       if (res.status === 409) {
         const dupeData = await res.json();
-        const proceed = window.confirm(
-          `${dupeData.message}\n\nDo you want to submit it anyway?`
-        );
-        if (!proceed) {
-          setStep("form");
-          return;
-        }
+        toast({
+          title: "⚠️ Possible duplicate detected",
+          description: dupeData.message,
+          variant: "destructive",
+        });
         res = await fetch("/api/invoices", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
