@@ -79,6 +79,15 @@ export async function PUT(
         ...(body.totalBudget !== undefined && { totalBudget: body.totalBudget }),
         ...(body.projectManager !== undefined && { projectManager: body.projectManager }),
         ...(body.description !== undefined && { description: body.description }),
+        // Track record fields
+        ...(body.completionDate !== undefined && { completionDate: body.completionDate ? new Date(body.completionDate) : null }),
+        ...(body.finalBudget !== undefined && { finalBudget: body.finalBudget }),
+        ...(body.finalCost !== undefined && { finalCost: body.finalCost }),
+        ...(body.irr !== undefined && { irr: body.irr }),
+        ...(body.equityMultiple !== undefined && { equityMultiple: body.equityMultiple }),
+        ...(body.profitAmount !== undefined && { profitAmount: body.profitAmount }),
+        ...(body.holdPeriodMonths !== undefined && { holdPeriodMonths: body.holdPeriodMonths }),
+        ...(body.completionNotes !== undefined && { completionNotes: body.completionNotes }),
       },
     });
 

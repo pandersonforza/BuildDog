@@ -16,6 +16,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/projects", label: "Projects" },
   { href: "/milestones", label: "Milestones" },
+  { href: "/track-record", label: "Track Record" },
   { href: "/admin/users", label: "Users", adminOnly: true },
 ];
 

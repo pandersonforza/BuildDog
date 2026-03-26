@@ -74,6 +74,16 @@ model Project {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // Completion / Track Record fields
+  completionDate   DateTime?
+  finalBudget      Float?
+  finalCost        Float?
+  irr              Float?
+  equityMultiple   Float?
+  profitAmount     Float?
+  holdPeriodMonths Int?
+  completionNotes  String?
+
   budgetCategories BudgetCategory[]
   contracts        Contract[]
   drawRequests     DrawRequest[]

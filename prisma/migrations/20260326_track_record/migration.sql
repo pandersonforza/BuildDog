@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE "Project" ADD COLUMN "completionDate" TIMESTAMP(3);
+ALTER TABLE "Project" ADD COLUMN "finalBudget" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN "finalCost" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN "irr" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN "equityMultiple" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN "profitAmount" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN "holdPeriodMonths" INTEGER;
+ALTER TABLE "Project" ADD COLUMN "completionNotes" TEXT;
