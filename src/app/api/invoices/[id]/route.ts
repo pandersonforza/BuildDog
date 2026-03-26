@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { unlink } from 'fs/promises';
-import path from 'path';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   'Pending Review': ['Submitted'],
@@ -330,6 +328,8 @@ export async function DELETE(
 
     if (deleteFile && existing.filePath) {
       try {
+        const { unlink } = await import('fs/promises');
+        const path = await import('path');
         const absolutePath = path.join(process.cwd(), 'public', existing.filePath);
         await unlink(absolutePath);
       } catch (fsError) {

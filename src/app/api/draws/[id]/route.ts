@@ -17,11 +17,11 @@ export async function GET(
     const drawRequest = await prisma.drawRequest.findUnique({
       where: { id },
       include: {
-        project: true,
+        project: { select: { id: true, name: true, status: true, address: true } },
         lineItems: {
           include: {
             budgetLineItem: {
-              include: { category: true },
+              include: { category: { select: { id: true, name: true, categoryGroup: true } } },
             },
           },
         },
@@ -57,9 +57,9 @@ export async function PUT(
       where: { id },
       include: {
         lineItems: {
-          include: { budgetLineItem: true },
+          select: { id: true, budgetLineItemId: true, thisDrawAmount: true },
         },
-        invoices: true,
+        invoices: { select: { id: true } },
       },
     });
 

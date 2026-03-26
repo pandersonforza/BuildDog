@@ -17,8 +17,15 @@ export async function GET(
           },
         },
         contracts: {
-          include: {
-            vendor: true,
+          select: {
+            id: true,
+            title: true,
+            amount: true,
+            type: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            vendor: { select: { id: true, name: true, company: true } },
           },
         },
         drawRequests: {
@@ -26,9 +33,6 @@ export async function GET(
             lineItems: true,
           },
           orderBy: { drawNumber: 'asc' },
-        },
-        documents: {
-          orderBy: { uploadDate: 'desc' },
         },
       },
     });

@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { NextRequest } from 'next/server';
 
 // Client upload handler — the file goes directly from browser to Blob storage,
 // bypassing the 4.5MB serverless body limit.

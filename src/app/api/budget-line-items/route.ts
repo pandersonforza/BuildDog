@@ -16,10 +16,7 @@ export async function GET(request: NextRequest) {
     const lineItems = await prisma.budgetLineItem.findMany({
       where: { categoryId },
       include: {
-        category: true,
-        contracts: {
-          include: { vendor: true },
-        },
+        category: { select: { id: true, name: true, categoryGroup: true, projectId: true } },
       },
       orderBy: { description: 'asc' },
     });

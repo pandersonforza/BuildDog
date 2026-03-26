@@ -54,10 +54,16 @@ export async function POST(request: NextRequest) {
     }
 
     const projects = await prisma.project.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
         budgetCategories: {
-          include: {
-            lineItems: true,
+          select: {
+            id: true,
+            name: true,
+            lineItems: {
+              select: { id: true, description: true, revisedBudget: true },
+            },
           },
         },
       },

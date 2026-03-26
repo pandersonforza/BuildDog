@@ -14,17 +14,27 @@ export async function GET(request: NextRequest) {
     const drawRequests = await prisma.drawRequest.findMany({
       where,
       include: {
-        project: true,
+        project: { select: { id: true, name: true, status: true } },
         lineItems: {
           include: {
-            budgetLineItem: true,
+            budgetLineItem: {
+              select: { id: true, description: true, revisedBudget: true, actualCost: true, committedCost: true, categoryId: true },
+            },
           },
         },
         invoices: {
-          include: {
+          select: {
+            id: true,
+            vendorName: true,
+            invoiceNumber: true,
+            amount: true,
+            date: true,
+            status: true,
             lineItem: {
-              include: {
-                category: true,
+              select: {
+                id: true,
+                description: true,
+                category: { select: { id: true, name: true } },
               },
             },
           },

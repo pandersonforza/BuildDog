@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { NextRequest } from "next/server";
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",

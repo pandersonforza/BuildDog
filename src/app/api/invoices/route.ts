@@ -23,10 +23,10 @@ export async function GET(request: NextRequest) {
     const invoices = await prisma.invoice.findMany({
       where,
       include: {
-        project: true,
+        project: { select: { id: true, name: true, status: true } },
         lineItem: {
           include: {
-            category: true,
+            category: { select: { id: true, name: true, categoryGroup: true } },
           },
         },
       },

@@ -56,9 +56,17 @@ export async function POST(request: NextRequest) {
     // Get project info for context
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        address: true,
         budgetCategories: {
-          include: { lineItems: true },
+          select: {
+            id: true,
+            name: true,
+            categoryGroup: true,
+            lineItems: { select: { id: true, description: true } },
+          },
         },
       },
     });

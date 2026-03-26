@@ -12,13 +12,15 @@ export async function GET(
       where: { id },
       include: {
         category: {
-          include: { project: true },
-        },
-        contracts: {
-          include: { vendor: true },
+          select: { id: true, name: true, categoryGroup: true, projectId: true },
         },
         drawLineItems: {
-          include: { drawRequest: true },
+          select: {
+            id: true,
+            thisDrawAmount: true,
+            previousDraws: true,
+            drawRequest: { select: { id: true, drawNumber: true, status: true } },
+          },
         },
       },
     });

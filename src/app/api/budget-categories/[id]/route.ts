@@ -12,7 +12,6 @@ export async function GET(
       where: { id },
       include: {
         lineItems: true,
-        project: true,
       },
     });
 

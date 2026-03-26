@@ -44,19 +44,6 @@ export async function GET(
       );
     }
 
-    // Build a map of actual cost per budget line item from invoices
-    const invoiceSpentByLineItem: Record<string, number> = {};
-    for (const inv of project.invoices) {
-      if (inv.budgetLineItemId) {
-        invoiceSpentByLineItem[inv.budgetLineItemId] =
-          (invoiceSpentByLineItem[inv.budgetLineItemId] || 0) + inv.amount;
-      }
-    }
-    // Total spent from invoices not linked to a line item
-    const unlinkedSpent = project.invoices
-      .filter((inv: { budgetLineItemId: string | null }) => !inv.budgetLineItemId)
-      .reduce((sum: number, inv: { amount: number }) => sum + inv.amount, 0);
-
     // Budget by category group
     const categoryGroupMap: Record<
       string,

@@ -41,8 +41,9 @@ export async function GET() {
       ? withEquity.reduce((s, p) => s + (p.equityMultiple ?? 0), 0) / withEquity.length
       : null;
 
-    const avgHoldPeriod = projects.filter((p) => p.holdPeriodMonths != null).length > 0
-      ? projects.filter((p) => p.holdPeriodMonths != null).reduce((s, p) => s + (p.holdPeriodMonths ?? 0), 0) / projects.filter((p) => p.holdPeriodMonths != null).length
+    const withHoldPeriod = projects.filter((p) => p.holdPeriodMonths != null);
+    const avgHoldPeriod = withHoldPeriod.length > 0
+      ? withHoldPeriod.reduce((s, p) => s + (p.holdPeriodMonths ?? 0), 0) / withHoldPeriod.length
       : null;
 
     return NextResponse.json({
