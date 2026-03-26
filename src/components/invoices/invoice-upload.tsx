@@ -54,6 +54,21 @@ export function InvoiceUpload({
   const [totalFiles, setTotalFiles] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Queued reviewed invoices (for multi-file submit-all-at-end flow)
+  interface ReviewedInvoice {
+    vendorName: string;
+    invoiceNumber: string;
+    amount: number;
+    date: string;
+    description: string;
+    projectId: string;
+    budgetLineItemId: string;
+    filePath: string;
+    aiConfidence: number | null;
+    aiNotes: string | null;
+  }
+  const [reviewedInvoices, setReviewedInvoices] = useState<ReviewedInvoice[]>([]);
+
   // AI result + form state
   const [aiResult, setAiResult] = useState<AIInvoiceResult | null>(null);
   const [multiInvoices, setMultiInvoices] = useState<AIInvoiceResult[]>([]);
@@ -88,6 +103,7 @@ export function InvoiceUpload({
         currentFileIndexRef.current = 0;
         setTotalFiles(0);
         setAiResult(null);
+        setReviewedInvoices([]);
         setMultiInvoices([]);
         setMultiSelected([]);
         setVendorName("");
@@ -281,41 +297,67 @@ export function InvoiceUpload({
     await processFile(selectedFile);
   };
 
-  // Save invoice
-  const handleSave = async (submitForApproval = false) => {
+  // Capture current form data as a reviewed invoice
+  const captureCurrentInvoice = (): ReviewedInvoice | null => {
     if (!vendorName.trim()) {
-      toast({
-        title: "Validation error",
-        description: "Vendor name is required",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Validation error", description: "Vendor name is required", variant: "destructive" });
+      return null;
     }
-
     if (amount <= 0) {
-      toast({
-        title: "Validation error",
-        description: "Amount must be greater than zero",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Validation error", description: "Amount must be greater than zero", variant: "destructive" });
+      return null;
     }
+    return {
+      vendorName: vendorName.trim(),
+      invoiceNumber: invoiceNumber.trim(),
+      amount,
+      date,
+      description: description.trim(),
+      projectId: selectedProjectId,
+      budgetLineItemId: selectedLineItemId,
+      filePath,
+      aiConfidence: aiResult?.confidence ?? null,
+      aiNotes: aiResult?.reasoning ?? null,
+    };
+  };
+
+  // "Next" — save current form data and advance to next file
+  const handleNext = () => {
+    const invoice = captureCurrentInvoice();
+    if (!invoice) return;
+
+    const updated = [...reviewedInvoices, invoice];
+    setReviewedInvoices(updated);
+
+    // Advance to next file
+    const nextIndex = currentFileIndexRef.current + 1;
+    const queue = fileQueueRef.current;
+    currentFileIndexRef.current = nextIndex;
+    setCurrentFileIndex(nextIndex);
+    const nextFile = queue[nextIndex];
+    setSelectedFile(nextFile);
+    setAiResult(null);
+    setFilePath("");
+    setVendorName("");
+    setInvoiceNumber("");
+    setAmount(0);
+    setDate("");
+    setDescription("");
+    setSelectedLineItemId("");
+    setStep("processing");
+    processFile(nextFile);
+  };
+
+  // "Submit" — save current + submit all reviewed invoices
+  const handleSave = async (submitForApproval = false) => {
+    const current = captureCurrentInvoice();
+    if (!current) return;
+
+    const allInvoices = [...reviewedInvoices, current];
 
     if (submitForApproval) {
       if (!approverId || !submittedBy.trim()) {
-        toast({
-          title: "Validation error",
-          description: "Approver is required when submitting for approval",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!selectedProjectId || !selectedLineItemId) {
-        toast({
-          title: "Validation error",
-          description: "Project and Budget Line Item are required when submitting for approval",
-          variant: "destructive",
-        });
+        toast({ title: "Validation error", description: "Approver is required when submitting for approval", variant: "destructive" });
         return;
       }
     }
@@ -323,76 +365,51 @@ export function InvoiceUpload({
     setStep("saving");
 
     try {
-      const body: Record<string, unknown> = {
-        vendorName: vendorName.trim(),
-        invoiceNumber: invoiceNumber.trim() || null,
-        amount,
-        date,
-        description: description.trim(),
-        projectId: selectedProjectId || null,
-        budgetLineItemId: selectedLineItemId || null,
-        filePath,
-        aiConfidence: aiResult?.confidence ?? null,
-        aiNotes: aiResult?.reasoning ?? null,
-      };
+      let created = 0;
+      const approverUser = users.find((u) => u.id === approverId);
 
-      if (submitForApproval) {
-        const approverUser = users.find((u) => u.id === approverId);
-        body.status = "Submitted";
-        body.approver = approverUser?.name ?? "";
-        body.approverId = approverId;
-        body.submittedBy = submittedBy.trim();
-        body.submittedById = user?.id ?? null;
-        body.submittedDate = new Date().toISOString();
-      }
+      for (const inv of allInvoices) {
+        const body: Record<string, unknown> = {
+          vendorName: inv.vendorName,
+          invoiceNumber: inv.invoiceNumber || null,
+          amount: inv.amount,
+          date: inv.date,
+          description: inv.description,
+          projectId: inv.projectId || null,
+          budgetLineItemId: inv.budgetLineItemId || null,
+          filePath: inv.filePath,
+          aiConfidence: inv.aiConfidence,
+          aiNotes: inv.aiNotes,
+        };
 
-      const res = await fetch("/api/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+        if (submitForApproval) {
+          body.status = "Submitted";
+          body.approver = approverUser?.name ?? "";
+          body.approverId = approverId;
+          body.submittedBy = submittedBy.trim();
+          body.submittedById = user?.id ?? null;
+          body.submittedDate = new Date().toISOString();
+        }
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to save invoice");
+        const res = await fetch("/api/invoices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) created++;
       }
 
       toast({
         title: submitForApproval
-          ? "Invoice submitted for approval"
-          : "Invoice created successfully",
-        description: totalFiles > 1 ? `(${currentFileIndex + 1} of ${totalFiles})` : undefined,
+          ? `${created} invoice${created !== 1 ? "s" : ""} submitted for approval`
+          : `${created} invoice${created !== 1 ? "s" : ""} created`,
       });
       onSuccess();
-
-      // If more files in queue, advance to next
-      const nextIndex = currentFileIndexRef.current + 1;
-      const queue = fileQueueRef.current;
-      if (nextIndex < queue.length) {
-        currentFileIndexRef.current = nextIndex;
-        setCurrentFileIndex(nextIndex);
-        const nextFile = queue[nextIndex];
-        setSelectedFile(nextFile);
-        setAiResult(null);
-        setFilePath("");
-        setVendorName("");
-        setInvoiceNumber("");
-        setAmount(0);
-        setDate("");
-        setDescription("");
-        setSelectedLineItemId("");
-        // Keep projectId, approverId, submittedBy for convenience
-        // Skip back to upload step briefly, then auto-process
-        setStep("processing");
-        processFile(nextFile);
-      } else {
-        handleOpenChange(false);
-      }
+      handleOpenChange(false);
     } catch (err) {
       toast({
         title: "Error",
-        description:
-          err instanceof Error ? err.message : "Failed to save invoice",
+        description: err instanceof Error ? err.message : "Failed to save invoices",
         variant: "destructive",
       });
       setStep("review");
@@ -492,6 +509,8 @@ export function InvoiceUpload({
   const approverOptions = users
     .filter((u) => u.id !== user?.id)
     .map((u) => ({ value: u.id, label: u.name }));
+
+  const isLastFile = currentFileIndex >= fileQueueRef.current.length - 1;
 
   if (!canEdit) return null;
 
@@ -777,12 +796,20 @@ export function InvoiceUpload({
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
                 Cancel
               </Button>
-              <Button variant="outline" onClick={() => handleSave(false)}>
-                Save as Draft
-              </Button>
-              <Button onClick={() => handleSave(true)}>
-                Submit for Approval
-              </Button>
+              {isLastFile ? (
+                <>
+                  <Button variant="outline" onClick={() => handleSave(false)}>
+                    Save {totalFiles > 1 ? `All ${totalFiles} as Drafts` : "as Draft"}
+                  </Button>
+                  <Button onClick={() => handleSave(true)}>
+                    Submit {totalFiles > 1 ? `All ${totalFiles}` : ""} for Approval
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={handleNext}>
+                  Next →
+                </Button>
+              )}
             </DialogFooter>
             </div>{/* close form fields wrapper */}
           </div>
