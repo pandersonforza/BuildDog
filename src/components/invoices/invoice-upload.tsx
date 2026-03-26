@@ -252,7 +252,7 @@ export function InvoiceUpload({
     setAmount(pf.aiResult.amount);
     setDate(pf.aiResult.date);
     setDescription(pf.aiResult.description);
-    if (pf.aiResult.suggestedProjectId) setSelectedProjectId(pf.aiResult.suggestedProjectId);
+    if (!projectId && pf.aiResult.suggestedProjectId) setSelectedProjectId(pf.aiResult.suggestedProjectId);
     if (pf.aiResult.suggestedLineItemId) setSelectedLineItemId(pf.aiResult.suggestedLineItemId);
     else setSelectedLineItemId("");
   };
@@ -407,7 +407,7 @@ export function InvoiceUpload({
           amount: inv.amount,
           date: inv.date,
           description: inv.description,
-          projectId: inv.projectId || null,
+          projectId: projectId || inv.projectId || null,
           budgetLineItemId: inv.budgetLineItemId || null,
           filePath: inv.filePath,
           aiConfidence: inv.aiConfidence,
