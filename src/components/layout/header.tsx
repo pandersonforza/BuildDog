@@ -103,17 +103,9 @@ export function Header({ onMenuClick }: HeaderProps) {
               className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted"
               title="Profile settings"
             >
-              {user.profileImage ? (
-                <img
-                  src={user.profileImage}
-                  alt={user.name}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                  {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                </div>
-              )}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+              </div>
               <span className="text-sm font-medium hidden sm:inline">
                 {user.name}
               </span>

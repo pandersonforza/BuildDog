@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Camera, Loader2, Check, AlertCircle } from "lucide-react";
+import { Loader2, Check, AlertCircle } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, isLoading: authLoading } = useAuth();
 
   const [name, setName] = useState("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -19,48 +18,11 @@ export default function ProfilePage() {
   const [changingPw, setChangingPw] = useState(false);
   const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setProfileImage(user.profileImage ?? null);
     }
   }, [user]);
-
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setSaveMsg(null);
-    try {
-      const { upload } = await import("@vercel/blob/client");
-      const ext = file.name.split(".").pop() || "jpg";
-      const pathname = `avatars/${Date.now()}.${ext}`;
-      const blob = await upload(pathname, file, {
-        access: "public",
-        handleUploadUrl: "/api/auth/avatar",
-      });
-
-      setProfileImage(blob.url);
-
-      // Persist immediately
-      const res = await fetch("/api/auth/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileImage: blob.url }),
-      });
-      if (!res.ok) throw new Error("Failed to save avatar");
-      setSaveMsg({ type: "success", text: "Avatar updated" });
-    } catch (err) {
-      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Upload failed" });
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -135,50 +97,14 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-2xl space-y-8">
       <h1 className="text-2xl font-bold">Profile Settings</h1>
 
-      {/* Avatar section */}
-      <div className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Profile Picture</h2>
-        <div className="flex items-center gap-6">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-border focus:outline-none focus:ring-2 focus:ring-primary"
-            disabled={uploading}
-          >
-            {profileImage ? (
-              <img
-                src={profileImage}
-                alt={user.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground text-xl font-medium">
-                {initials}
-              </div>
-            )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-              {uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
-              ) : (
-                <Camera className="h-5 w-5 text-white" />
-              )}
-            </div>
-          </button>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Click the avatar to upload a new image.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              JPG, PNG, GIF, or WebP. Max 5MB.
-            </p>
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
+      {/* Avatar display */}
+      <div className="flex items-center gap-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-medium">
+          {initials}
+        </div>
+        <div>
+          <p className="text-lg font-semibold">{user.name}</p>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
       </div>
 
