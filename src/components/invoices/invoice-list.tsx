@@ -423,27 +423,37 @@ export function InvoiceList({
           if (match) { try { payItems = JSON.parse(match[1]); } catch { /* empty */ } }
           const isPayApp = payItems.length > 0;
 
+          const pdfUrl = approvingInvoice?.filePath
+            ? approvingInvoice.filePath.startsWith('http')
+              ? `/api/invoices/file?url=${encodeURIComponent(approvingInvoice.filePath)}`
+              : approvingInvoice.filePath
+            : null;
+
           return (
-            <DialogContent className={`max-h-[85vh] overflow-y-auto ${isPayApp ? "max-w-4xl" : ""}`}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Approve {isPayApp ? "Pay Application" : "Invoice"}</DialogTitle>
                 <DialogDescription>
                   Review and edit the details before approving.
                 </DialogDescription>
               </DialogHeader>
-              {approvingInvoice?.filePath && (
-                <a
-                  href={approvingInvoice.filePath.startsWith('http') ? `/api/invoices/file?url=${encodeURIComponent(approvingInvoice.filePath)}` : approvingInvoice.filePath}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <FileText className="h-4 w-4" />
-                  View Attached Invoice PDF
-                </a>
-              )}
 
-              <div className={isPayApp ? "grid grid-cols-2 gap-6" : ""}>
+              <div className={`grid gap-6 ${pdfUrl ? "grid-cols-2" : ""}`}>
+                {/* PDF Preview — left side */}
+                {pdfUrl && (
+                  <div className="border border-border rounded-lg overflow-hidden h-[65vh]">
+                    <iframe
+                      src={pdfUrl}
+                      className="w-full h-full"
+                      title="Invoice PDF Preview"
+                    />
+                  </div>
+                )}
+
+                {/* Right side: form + pay app items */}
+                <div className="overflow-y-auto max-h-[65vh] pr-1">
+
+              <div className={isPayApp ? "space-y-4" : ""}>
                 {/* Pay App line items — left side */}
                 {isPayApp && (
                   <div className="border border-border rounded-lg overflow-hidden">
@@ -518,6 +528,9 @@ export function InvoiceList({
                   </div>
                 </div>
               </div>
+
+                </div>{/* close right-side scrollable */}
+              </div>{/* close grid */}
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
