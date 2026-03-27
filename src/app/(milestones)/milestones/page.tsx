@@ -116,75 +116,36 @@ export default function MilestonesOverviewPage() {
   }
 
   const handleExport = async () => {
-    const XLSX = await import("xlsx");
+    const { pdf } = await import("@react-pdf/renderer");
+    const { MilestonesReportDocument } = await import("./milestones-report-pdf");
 
-    const wb = XLSX.utils.book_new();
-    const rows: (string | number)[][] = [];
-
-    // Title + filters
     const dateLabel =
       dateFrom || dateTo
         ? `${dateFrom ? dateFrom.toLocaleDateString() : "Start"} – ${dateTo ? dateTo.toLocaleDateString() : "End"}`
         : "All dates";
-    rows.push(["Milestones Overview Export"]);
-    rows.push(["Group", groupFilter, "Date Range", dateLabel]);
-    rows.push([]);
 
-    // Summary
-    rows.push(["Summary"]);
-    rows.push(["Total Expected Fees", totalExpected]);
-    rows.push(["Paid to Date", totalPaid]);
-    rows.push(["Remaining", totalRemaining]);
-    rows.push([`Milestones: ${completedCount} Completed / ${pendingCount} Pending`]);
-    rows.push([]);
+    const doc = (
+      <MilestonesReportDocument
+        groupFilter={groupFilter}
+        dateLabel={dateLabel}
+        exportDate={new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+        totalExpected={totalExpected}
+        totalPaid={totalPaid}
+        totalRemaining={totalRemaining}
+        completedCount={completedCount}
+        pendingCount={pendingCount}
+        feesByYearData={feesByYearData}
+        projectGroups={[...projectGroups.values()]}
+      />
+    );
 
-    // Dev Fees by Year
-    if (feesByYearData.length > 0) {
-      rows.push(["Dev Fees by Year"]);
-      rows.push(["Year", "Expected", "Paid", "Remaining"]);
-      for (const row of feesByYearData) {
-        rows.push([row.year, row.expected, row.paid, row.remaining]);
-      }
-      rows.push([
-        "Total",
-        feesByYearData.reduce((s, r) => s + r.expected, 0),
-        feesByYearData.reduce((s, r) => s + r.paid, 0),
-        feesByYearData.reduce((s, r) => s + r.remaining, 0),
-      ]);
-      rows.push([]);
-    }
-
-    // Per-project milestones
-    rows.push(["Project Milestones"]);
-    rows.push(["Project", "Address", "Milestone", "Status", "Expected Date", "Completed Date", "Dev Fee", "Paid", "Remaining"]);
-    for (const { project, milestones: pMilestones } of projectGroups.values()) {
-      for (const m of pMilestones) {
-        rows.push([
-          project.name,
-          project.address ?? "",
-          m.name,
-          m.status,
-          m.expectedDate ? new Date(m.expectedDate).toLocaleDateString() : "",
-          m.completedDate ? new Date(m.completedDate).toLocaleDateString() : "",
-          m.devFee,
-          m.paidAmount,
-          m.devFee - m.paidAmount,
-        ]);
-      }
-    }
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-
-    // Column widths
-    ws["!cols"] = [
-      { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 14 },
-      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws, "Milestones");
-
-    const dateSuffix = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `milestones-overview-${dateSuffix}.xlsx`);
+    const blob = await pdf(doc).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `milestones-overview-${new Date().toISOString().slice(0, 10)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
