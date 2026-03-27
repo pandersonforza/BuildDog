@@ -33,7 +33,8 @@ export default function MilestonesOverviewPage() {
   const [milestones, setMilestones] = useState<MilestoneWithProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [groupFilter, setGroupFilter] = useState("All");
-  const [yearFilter, setYearFilter] = useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     setIsLoading(true);
@@ -58,19 +59,20 @@ export default function MilestonesOverviewPage() {
     );
   }
 
-  // Get unique years from milestone expected dates
-  const years = [...new Set(
-    milestones
-      .map((m) => m.expectedDate ? new Date(m.expectedDate).getFullYear() : null)
-      .filter(Boolean)
-  )].sort() as number[];
+  const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
+  const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
+  const hasDateFilter = fromMs !== null || toMs !== null;
 
-  // Filter by year based on milestone's expected date
-  const filteredMilestones = yearFilter === "All"
-    ? milestones
-    : milestones.filter((m) =>
-        m.expectedDate && String(new Date(m.expectedDate).getFullYear()) === yearFilter
-      );
+  // Filter milestones by date range on expected date
+  const filteredMilestones = hasDateFilter
+    ? milestones.filter((m) => {
+        if (!m.expectedDate) return false;
+        const t = new Date(m.expectedDate).getTime();
+        if (fromMs !== null && t < fromMs) return false;
+        if (toMs !== null && t > toMs) return false;
+        return true;
+      })
+    : milestones;
 
   const totalExpected = filteredMilestones.reduce((s, m) => s + m.devFee, 0);
   const totalPaid = filteredMilestones.reduce((s, m) => s + m.paidAmount, 0);
@@ -83,9 +85,9 @@ export default function MilestonesOverviewPage() {
     { name: "Pending", value: pendingCount },
   ].filter((d) => d.value > 0);
 
-  // Dev fees by year summary (based on milestone expected date)
+  // Dev fees by year summary — use filtered set so date range is respected
   const feesByYear = new Map<number, { expected: number; paid: number }>();
-  for (const m of milestones) {
+  for (const m of filteredMilestones) {
     if (!m.expectedDate) continue;
     const yr = new Date(m.expectedDate).getFullYear();
     const existing = feesByYear.get(yr) || { expected: 0, paid: 0 };
@@ -127,37 +129,34 @@ export default function MilestonesOverviewPage() {
             </button>
           ))}
         </div>
-        {years.length > 0 && (
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+        <div className="flex items-center gap-2 ml-2">
+          <span className="text-sm text-muted-foreground">From</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-9 rounded-md border border-border bg-input px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          />
+          <span className="text-sm text-muted-foreground">To</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-9 rounded-md border border-border bg-input px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          />
+          {hasDateFilter && (
             <button
-              onClick={() => setYearFilter("All")}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                yearFilter === "All"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="px-3 py-1 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground transition-colors"
             >
-              All Years
+              Clear
             </button>
-            {years.map((y) => (
-              <button
-                key={y}
-                onClick={() => setYearFilter(String(y))}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  yearFilter === String(y)
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {y}
-              </button>
-            ))}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Dev Fees by Year */}
-      {feesByYearData.length > 1 && yearFilter === "All" && (
+      {feesByYearData.length > 1 && (
         <Card>
           <CardHeader>
             <CardTitle>Dev Fees by Year</CardTitle>
