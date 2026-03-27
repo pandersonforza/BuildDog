@@ -38,7 +38,14 @@ export function DateRangePicker({ from, to, onChange, className }: DateRangePick
 
   function handleSelect(range: DateRange | undefined) {
     onChange({ from: range?.from, to: range?.to });
-    if (range?.from && range?.to) setOpen(false);
+    // Only close once the user has picked two distinct dates
+    if (
+      range?.from &&
+      range?.to &&
+      range.from.getTime() !== range.to.getTime()
+    ) {
+      setOpen(false);
+    }
   }
 
   return (
