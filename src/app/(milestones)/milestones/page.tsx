@@ -24,7 +24,7 @@ interface MilestoneWithProject {
   expectedDate: string | null;
   completedDate: string | null;
   status: string;
-  project: { id: string; name: string; status: string; projectedOpenYear: number | null };
+  project: { id: string; name: string; address: string; status: string; projectedOpenYear: number | null };
 }
 
 const PIE_COLORS = ["#10b981", "#64748b"];
@@ -258,9 +258,14 @@ export default function MilestonesOverviewPage() {
           <Card key={project.id}>
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
-                <Link href={`/projects/${project.id}/milestones`} className="text-base font-semibold hover:text-primary hover:underline">
-                  {project.name}
-                </Link>
+                <div>
+                  <Link href={`/projects/${project.id}/milestones`} className="text-base font-semibold hover:text-primary hover:underline">
+                    {project.name}
+                  </Link>
+                  {project.address && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{project.address}</p>
+                  )}
+                </div>
                 <div className="flex gap-6 text-sm text-muted-foreground">
                   <span>Expected: <span className="text-foreground font-medium">{formatCurrency(pExpected)}</span></span>
                   <span>Paid: <span className="text-emerald-400 font-medium">{formatCurrency(pPaid)}</span></span>
