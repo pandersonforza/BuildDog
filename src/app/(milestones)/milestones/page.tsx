@@ -92,7 +92,7 @@ export default function MilestonesOverviewPage() {
     .map(([year, data]) => ({ year, ...data, remaining: data.expected - data.paid }));
 
   // Group milestones by project for the cards
-  const projectGroups = new Map<string, { project: { id: string; name: string }; milestones: MilestoneWithProject[] }>();
+  const projectGroups = new Map<string, { project: { id: string; name: string; address: string }; milestones: MilestoneWithProject[] }>();
   for (const m of filteredMilestones) {
     const existing = projectGroups.get(m.project.id);
     if (existing) {
