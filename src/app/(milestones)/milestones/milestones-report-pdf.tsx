@@ -4,8 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Svg,
-  Path,
 } from "@react-pdf/renderer";
 
 const fmt = (n: number) =>
@@ -26,34 +24,6 @@ const EMERALD   = "#059669";
 const AMBER     = "#d97706";
 const ACCENT    = "#6366f1";
 
-// Dog house icon — ported from src/components/ui/logo.tsx (viewBox 0 0 24 24)
-function PropHoundLogo({ size = 28 }: { size?: number }) {
-  const TEAL = "#2a9a9a";
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      {/* House body + roof fill */}
-      <Path
-        d="M12 2L2 10h3v10h14V10h3L12 2z"
-        fill={TEAL}
-        fillOpacity="0.25"
-        stroke={TEAL}
-        strokeWidth="1.5"
-      />
-      {/* Door arch */}
-      <Path
-        d="M9.5 20v-5.5a2.5 2.5 0 0 1 5 0V20"
-        fill={TEAL}
-        fillOpacity="0.4"
-        stroke={TEAL}
-        strokeWidth="1.5"
-      />
-      {/* Left roof ridge */}
-      <Path d="M12 2L2 10"  stroke={TEAL} strokeWidth="2" />
-      {/* Right roof ridge */}
-      <Path d="M12 2L22 10" stroke={TEAL} strokeWidth="2" />
-    </Svg>
-  );
-}
 
 const s = StyleSheet.create({
   page: {
@@ -77,8 +47,7 @@ const s = StyleSheet.create({
     alignItems: "flex-start",
   },
   headerLeft: { flexDirection: "column", gap: 5 },
-  headerBrand: { flexDirection: "row", alignItems: "center", gap: 8 },
-  headerBrandName: { fontSize: 13, fontFamily: "Helvetica-Bold", color: WHITE },
+  headerBrandName: { fontSize: 13, fontFamily: "Helvetica-Bold" },
   headerTitle: { fontSize: 18, fontFamily: "Helvetica-Bold", color: WHITE },
   headerSub: { fontSize: 9, color: "#94a3b8" },
   headerRight: { flexDirection: "column", alignItems: "flex-end", gap: 3 },
@@ -233,14 +202,11 @@ export function MilestonesReportDocument({
         {/* ── Header ── */}
         <View style={s.header}>
           <View style={s.headerLeft}>
-            {/* Brand row: logo + name */}
-            <View style={s.headerBrand}>
-              <PropHoundLogo size={28} />
-              <Text style={s.headerBrandName}>
-                <Text style={{ color: WHITE }}>Prop</Text>
-                <Text style={{ color: "#2a9a9a" }}>Hound</Text>
-              </Text>
-            </View>
+            {/* Brand name */}
+            <Text style={s.headerBrandName}>
+              <Text style={{ color: WHITE }}>Prop</Text>
+              <Text style={{ color: "#2a9a9a" }}>Hound</Text>
+            </Text>
             {/* Report title */}
             <Text style={s.headerTitle}>Milestones Overview</Text>
             <Text style={s.headerSub}>
