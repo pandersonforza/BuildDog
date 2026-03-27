@@ -34,4 +34,78 @@ const SelectNative = React.forwardRef<HTMLSelectElement, SelectNativeProps>(
 );
 SelectNative.displayName = "SelectNative";
 
-export { SelectNative };
+export interface SearchableSelectProps {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+function SearchableSelect({ options, value, onChange, placeholder = "Select...", className }: SearchableSelectProps) {
+  const [query, setQuery] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const selected = options.find((o) => o.value === value);
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  // Close on outside click
+  React.useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      <input
+        type="text"
+        className="flex h-10 w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0"
+        placeholder={open ? "Type to search..." : (selected?.label ?? placeholder)}
+        value={open ? query : (selected?.label ?? "")}
+        onFocus={() => {
+          setOpen(true);
+          setQuery("");
+        }}
+        onChange={(e) => setQuery(e.target.value)}
+        autoComplete="off"
+      />
+      {open && (
+        <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-card shadow-lg text-sm">
+          {filtered.length === 0 ? (
+            <li className="px-3 py-2 text-muted-foreground">No results found.</li>
+          ) : (
+            filtered.map((option) => (
+              <li
+                key={option.value}
+                className={cn(
+                  "cursor-pointer px-3 py-2 hover:bg-muted",
+                  option.value === value && "bg-muted font-medium"
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(option.value);
+                  setOpen(false);
+                  setQuery("");
+                }}
+              >
+                {option.label}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export { SelectNative, SearchableSelect };

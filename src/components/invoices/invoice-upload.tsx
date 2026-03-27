@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { SelectNative } from "@/components/ui/select";
+import { SelectNative, SearchableSelect } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { Loader2, Upload, FileText, Sparkles, Check } from "lucide-react";
@@ -798,10 +798,9 @@ export function InvoiceUpload({
                     </div>
                   )}
                 </div>
-                <SelectNative
-                  id="project"
+                <SearchableSelect
                   value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  onChange={setSelectedProjectId}
                   placeholder="Select a project"
                   options={projectOptions}
                 />
@@ -970,9 +969,9 @@ export function InvoiceUpload({
             {!projectId && (
               <div className="space-y-2">
                 <Label>Default Project (for invoices without a match)</Label>
-                <SelectNative
+                <SearchableSelect
                   value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  onChange={setSelectedProjectId}
                   placeholder="Select a project"
                   options={projectOptions}
                 />
