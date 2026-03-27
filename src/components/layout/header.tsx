@@ -29,7 +29,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
-  const [nameCache, setNameCache] = useState<Record<string, string>>({});
+  const [nameCache, setNameCache] = useState<Record<string, { name: string; address?: string }>>({});
   const { user, logout } = useAuth();
 
   const segments = pathname.split("/").filter(Boolean);
@@ -44,7 +44,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           .then((r) => r.ok ? r.json() : null)
           .then((data) => {
             if (data?.name) {
-              setNameCache((prev) => ({ ...prev, [id]: data.name }));
+              setNameCache((prev) => ({ ...prev, [id]: { name: data.name, address: data.address } }));
             }
           })
           .catch(() => {});
@@ -60,7 +60,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     if (KNOWN_SEGMENTS[segment]) {
       label = KNOWN_SEGMENTS[segment];
     } else if (isId(segment) && nameCache[segment]) {
-      label = nameCache[segment];
+      const cached = nameCache[segment];
+      label = cached.address ? `${cached.name} - ${cached.address}` : cached.name;
     } else if (isId(segment)) {
       label = "...";
     } else {
