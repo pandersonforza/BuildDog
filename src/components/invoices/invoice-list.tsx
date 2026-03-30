@@ -56,6 +56,7 @@ export function InvoiceList({
     description: "",
   });
   const [payAppItemsOpen, setPayAppItemsOpen] = useState(false);
+  const [viewingInvoice, setViewingInvoice] = useState<InvoiceWithRelations | null>(null);
   const { toast } = useToast();
   const { user, canEdit, canMarkPaid } = useAuth();
 
@@ -283,17 +284,14 @@ export function InvoiceList({
         const status = row.original.status;
         return (
           <div className="flex items-center gap-1">
-            {row.original.filePath && (
-              <a
-                href={row.original.filePath.startsWith('http') ? `/api/invoices/file?url=${encodeURIComponent(row.original.filePath)}` : row.original.filePath}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View PDF"
-                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              title="View invoice"
+              onClick={() => setViewingInvoice(row.original)}
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
             {canEdit && status === "Pending Review" && (
               <>
                 <Button
@@ -542,6 +540,127 @@ export function InvoiceList({
                 >
                   Approve {isPayApp ? "Pay App" : "Invoice"}
                 </Button>
+              </DialogFooter>
+            </DialogContent>
+          );
+        })()}
+      </Dialog>
+
+      {/* Read-only invoice view dialog */}
+      <Dialog open={!!viewingInvoice} onOpenChange={(o) => { if (!o) setViewingInvoice(null); }}>
+        {viewingInvoice && (() => {
+          const notes = viewingInvoice.aiNotes || "";
+          const match = notes.match(/__payAppLineItems__([\s\S]+)$/);
+          let payItems: { lineItemId: string; description: string; amount: number }[] = [];
+          if (match) { try { payItems = JSON.parse(match[1]); } catch { /* empty */ } }
+          const isPayApp = payItems.length > 0;
+
+          const pdfUrl = viewingInvoice.filePath
+            ? viewingInvoice.filePath.startsWith("http")
+              ? `/api/invoices/file?url=${encodeURIComponent(viewingInvoice.filePath)}`
+              : viewingInvoice.filePath
+            : null;
+
+          return (
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>{isPayApp ? "Pay Application" : "Invoice"} — {viewingInvoice.vendorName}</DialogTitle>
+                <DialogDescription>
+                  {viewingInvoice.invoiceNumber ? `#${viewingInvoice.invoiceNumber} · ` : ""}
+                  {formatDate(viewingInvoice.date)} · <StatusBadge status={viewingInvoice.status} />
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className={`grid gap-6 ${pdfUrl ? "grid-cols-2" : ""}`}>
+                {pdfUrl && (
+                  <div className="border border-border rounded-lg overflow-hidden h-[65vh]">
+                    <iframe src={pdfUrl} className="w-full h-full" title="Invoice PDF" />
+                  </div>
+                )}
+
+                <div className="overflow-y-auto max-h-[65vh] pr-1 space-y-4">
+                  {isPayApp && (
+                    <div className="border border-border rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 text-sm font-medium bg-muted/30 border-b border-border">
+                        Line Items ({payItems.length})
+                      </div>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-muted-foreground">
+                            <th className="py-1.5 px-3">Description</th>
+                            <th className="py-1.5 px-3 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payItems.map((item, idx) => (
+                            <tr key={idx} className="border-b border-border/50">
+                              <td className="py-1.5 px-3">{item.description}</td>
+                              <td className="py-1.5 px-3 text-right">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-primary/20 font-semibold">
+                            <td className="py-1.5 px-3">Total</td>
+                            <td className="py-1.5 px-3 text-right text-primary">
+                              ${payItems.reduce((s, i) => s + i.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <span className="text-muted-foreground">Vendor</span>
+                      <span className="font-medium">{viewingInvoice.vendorName}</span>
+                      <span className="text-muted-foreground">Invoice #</span>
+                      <span>{viewingInvoice.invoiceNumber || "—"}</span>
+                      <span className="text-muted-foreground">Amount</span>
+                      <span className="font-medium"><CurrencyDisplay amount={viewingInvoice.amount} /></span>
+                      <span className="text-muted-foreground">Date</span>
+                      <span>{formatDate(viewingInvoice.date)}</span>
+                      <span className="text-muted-foreground">Status</span>
+                      <span><StatusBadge status={viewingInvoice.status} /></span>
+                      <span className="text-muted-foreground">Approver</span>
+                      <span>{viewingInvoice.approver || "—"}</span>
+                      {viewingInvoice.lineItem && (
+                        <>
+                          <span className="text-muted-foreground">Line Item</span>
+                          <span>{viewingInvoice.lineItem.category.name} — {viewingInvoice.lineItem.description}</span>
+                        </>
+                      )}
+                    </div>
+                    {viewingInvoice.description && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-muted-foreground mb-1">Description</p>
+                        <p>{viewingInvoice.description}</p>
+                      </div>
+                    )}
+                    {viewingInvoice.rejectionReason && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-muted-foreground mb-1">Rejection Reason</p>
+                        <p className="text-destructive">{viewingInvoice.rejectionReason}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                {pdfUrl && (
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mr-auto"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open PDF
+                  </a>
+                )}
+                <Button variant="outline" onClick={() => setViewingInvoice(null)}>Close</Button>
               </DialogFooter>
             </DialogContent>
           );
