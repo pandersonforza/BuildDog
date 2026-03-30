@@ -28,28 +28,15 @@ export async function GET() {
     return NextResponse.json({ error: "Civil line item not found in CA0003" }, { status: 404 });
   }
 
-  // Sum only invoices that still exist and are Approved or Paid
-  const invoices = await prisma.invoice.findMany({
-    where: {
-      budgetLineItemId: lineItem.id,
-      status: { in: ["Approved", "Paid"] },
-    },
-    select: { id: true, amount: true, status: true, invoiceNumber: true },
-  });
-
-  const correctActual = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-
   await prisma.budgetLineItem.update({
     where: { id: lineItem.id },
-    data: { actualCost: correctActual },
+    data: { actualCost: 0 },
   });
 
   return NextResponse.json({
     project: project.name,
     lineItem: lineItem.description,
     before: lineItem.actualCost,
-    after: correctActual,
-    invoicesFound: invoices.length,
-    invoices,
+    after: 0,
   });
 }
