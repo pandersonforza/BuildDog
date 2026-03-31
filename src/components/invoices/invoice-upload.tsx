@@ -839,11 +839,10 @@ export function InvoiceUpload({
                     </a>
                   </div>
                 ) : (
-                  <SelectNative
-                    id="lineItem"
+                  <SearchableSelect
                     value={selectedLineItemId}
-                    onChange={(e) => setSelectedLineItemId(e.target.value)}
-                    placeholder="Select a line item"
+                    onChange={setSelectedLineItemId}
+                    placeholder="Search line items..."
                     options={lineItemOptions}
                   />
                 )
