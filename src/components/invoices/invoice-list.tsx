@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import { Plus, ExternalLink, Trash2, DollarSign, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, ExternalLink, Trash2, DollarSign, FileText, ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { SelectNative } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import type { InvoiceWithRelations } from "@/types";
 
@@ -57,6 +58,10 @@ export function InvoiceList({
   });
   const [payAppItemsOpen, setPayAppItemsOpen] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceWithRelations | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [vendorFilter, setVendorFilter] = useState<string>("");
+  const [lineItemFilter, setLineItemFilter] = useState<string>("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { toast } = useToast();
   const { user, canEdit, canMarkPaid } = useAuth();
 
@@ -186,6 +191,30 @@ export function InvoiceList({
       });
     }
   };
+
+  // Derive unique filter options from invoice data
+  const uniqueStatuses = ["All", ...Array.from(new Set(invoices.map((i) => i.status))).sort()];
+  const uniqueVendors = Array.from(new Set(invoices.map((i) => i.vendorName).filter(Boolean))).sort();
+  const uniqueLineItems = Array.from(
+    new Map(
+      invoices
+        .filter((i) => i.lineItem)
+        .map((i) => [`${i.lineItem!.category.name} — ${i.lineItem!.description}`, i.lineItem!.id])
+    ).entries()
+  ).sort(([a], [b]) => a.localeCompare(b));
+
+  const activeFilterCount = [
+    statusFilter !== "All",
+    vendorFilter !== "",
+    lineItemFilter !== "",
+  ].filter(Boolean).length;
+
+  const filteredInvoices = invoices.filter((inv) => {
+    if (statusFilter !== "All" && inv.status !== statusFilter) return false;
+    if (vendorFilter && inv.vendorName !== vendorFilter) return false;
+    if (lineItemFilter && inv.lineItem?.id !== lineItemFilter) return false;
+    return true;
+  });
 
   const columns: ColumnDef<InvoiceWithRelations, unknown>[] = [
     {
@@ -383,9 +412,86 @@ export function InvoiceList({
         )}
       </div>
 
+      {/* Filter bar */}
+      <div className="mb-4 space-y-3">
+        {/* Status pills + filter toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+            {uniqueStatuses.map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  statusFilter === s
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className={`gap-1.5 ${activeFilterCount > 0 ? "border-primary text-primary" : ""}`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-0.5 bg-primary text-primary-foreground rounded-full text-xs w-4 h-4 flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setStatusFilter("All"); setVendorFilter(""); setLineItemFilter(""); }}
+              className="gap-1 text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Expanded filter row */}
+        {filtersOpen && (
+          <div className="flex items-center gap-3 flex-wrap p-3 rounded-lg border border-border bg-muted/20">
+            <div className="flex items-center gap-2 min-w-[200px]">
+              <label className="text-sm text-muted-foreground whitespace-nowrap">Vendor</label>
+              <SelectNative
+                value={vendorFilter}
+                onChange={(e) => setVendorFilter(e.target.value)}
+                options={[
+                  { value: "", label: "All vendors" },
+                  ...uniqueVendors.map((v) => ({ value: v, label: v })),
+                ]}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 min-w-[240px]">
+              <label className="text-sm text-muted-foreground whitespace-nowrap">Line Item</label>
+              <SelectNative
+                value={lineItemFilter}
+                onChange={(e) => setLineItemFilter(e.target.value)}
+                options={[
+                  { value: "", label: "All line items" },
+                  ...uniqueLineItems.map(([label, value]) => ({ value, label })),
+                ]}
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       <DataTable
         columns={columns}
-        data={invoices}
+        data={filteredInvoices}
         searchKey="vendorName"
         searchPlaceholder="Search invoices..."
       />
