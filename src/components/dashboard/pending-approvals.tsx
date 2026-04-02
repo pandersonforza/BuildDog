@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { AlertCircle, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { SearchableSelect, SelectNative } from "@/components/ui/select";
 
 interface Invoice {
   id: string;
@@ -57,6 +58,11 @@ export function PendingApprovals() {
     amount: "",
     description: "",
   });
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedLineItemId, setSelectedLineItemId] = useState("");
+  const [projects, setProjects] = useState<{ id: string; name: string; address: string }[]>([]);
+  const [lineItems, setLineItems] = useState<{ id: string; description: string; category: { name: string } }[]>([]);
+  const [loadingLineItems, setLoadingLineItems] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectInput, setShowRejectInput] = useState(false);
   const { toast } = useToast();
@@ -84,7 +90,7 @@ export function PendingApprovals() {
     }
   }, [authLoading, user, fetchInvoices]);
 
-  const openView = (invoice: Invoice) => {
+  const openView = async (invoice: Invoice) => {
     setViewingInvoice(invoice);
     setApproveForm({
       vendorName: invoice.vendorName,
@@ -92,14 +98,40 @@ export function PendingApprovals() {
       amount: String(invoice.amount),
       description: invoice.description || "",
     });
+    setSelectedProjectId(invoice.project?.id || "");
+    setSelectedLineItemId(invoice.lineItem?.id || "");
     setRejectReason("");
     setShowRejectInput(false);
+    // Fetch all active projects for the selector
+    try {
+      const res = await fetch("/api/projects");
+      if (res.ok) setProjects(await res.json());
+    } catch { /* silently ignore */ }
   };
+
+  useEffect(() => {
+    if (!selectedProjectId || !viewingInvoice) { setLineItems([]); return; }
+    setLoadingLineItems(true);
+    fetch(`/api/projects/${selectedProjectId}`)
+      .then((r) => r.json())
+      .then((p) => {
+        const items: { id: string; description: string; category: { name: string } }[] = [];
+        for (const cat of p.budgetCategories || []) {
+          for (const li of cat.lineItems || []) {
+            items.push({ id: li.id, description: li.description, category: { name: cat.name } });
+          }
+        }
+        setLineItems(items);
+      })
+      .catch(() => setLineItems([]))
+      .finally(() => setLoadingLineItems(false));
+  }, [selectedProjectId, viewingInvoice]);
 
   const closeView = () => {
     setViewingInvoice(null);
     setShowRejectInput(false);
     setRejectReason("");
+    setLineItems([]);
   };
 
   const handleApprove = async () => {
@@ -115,6 +147,8 @@ export function PendingApprovals() {
           invoiceNumber: approveForm.invoiceNumber || null,
           amount: parseFloat(approveForm.amount),
           description: approveForm.description || null,
+          projectId: selectedProjectId || null,
+          budgetLineItemId: selectedLineItemId || null,
         }),
       });
       if (!res.ok) {
@@ -306,19 +340,38 @@ export function PendingApprovals() {
                       <Label htmlFor="pa-desc">Description</Label>
                       <Textarea id="pa-desc" value={approveForm.description} onChange={(e) => setApproveForm({ ...approveForm, description: e.target.value })} rows={3} />
                     </div>
-                    {viewingInvoice.project && (
-                      <div className="text-sm text-muted-foreground">
-                        Project: <span className="text-foreground font-medium">{viewingInvoice.project.name}</span>
-                        {viewingInvoice.project.address && (
-                          <span className="ml-1">— {viewingInvoice.project.address}</span>
-                        )}
-                      </div>
-                    )}
-                    {viewingInvoice.lineItem && (
-                      <div className="text-sm text-muted-foreground">
-                        Line item: {viewingInvoice.lineItem.category?.name} — {viewingInvoice.lineItem.description}
-                      </div>
-                    )}
+                    <div className="space-y-1.5">
+                      <Label>Project</Label>
+                      <SearchableSelect
+                        value={selectedProjectId}
+                        onChange={(val) => { setSelectedProjectId(val); setSelectedLineItemId(""); }}
+                        placeholder="Select a project"
+                        options={projects.map((p) => ({
+                          value: p.id,
+                          label: p.address ? `${p.name} — ${p.address}` : p.name,
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Budget Line Item</Label>
+                      {!selectedProjectId ? (
+                        <p className="text-sm text-muted-foreground">Select a project first</p>
+                      ) : loadingLineItems ? (
+                        <p className="text-sm text-muted-foreground">Loading line items...</p>
+                      ) : lineItems.length === 0 ? (
+                        <p className="text-sm text-amber-600">No line items found for this project</p>
+                      ) : (
+                        <SelectNative
+                          value={selectedLineItemId}
+                          onChange={(e) => setSelectedLineItemId(e.target.value)}
+                          placeholder="Select a line item"
+                          options={lineItems.map((li) => ({
+                            value: li.id,
+                            label: `${li.category.name} — ${li.description}`,
+                          }))}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {/* Rejection reason input — shown only when rejecting */}
