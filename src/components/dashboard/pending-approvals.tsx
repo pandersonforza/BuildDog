@@ -65,6 +65,14 @@ export function PendingApprovals() {
 
   if (loading) return null;
 
+  const oldest5 = [...invoices]
+    .sort((a, b) => {
+      const aDate = a.submittedDate ? new Date(a.submittedDate).getTime() : 0;
+      const bDate = b.submittedDate ? new Date(b.submittedDate).getTime() : 0;
+      return aDate - bDate;
+    })
+    .slice(0, 5);
+
   return (
     <>
       <Card>
@@ -94,7 +102,7 @@ export function PendingApprovals() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((invoice) => (
+                {oldest5.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.vendorName}</TableCell>
                     <TableCell>{formatCurrency(invoice.amount)}</TableCell>
@@ -113,6 +121,11 @@ export function PendingApprovals() {
                 ))}
               </TableBody>
             </Table>
+            {invoices.length > 5 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Showing 5 oldest of {invoices.length} pending — go to the Invoices tab to see all.
+              </p>
+            )}
           )}
         </CardContent>
       </Card>
