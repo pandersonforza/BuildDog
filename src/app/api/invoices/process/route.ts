@@ -53,7 +53,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Only fetch active projects to keep context small
     const projects = await prisma.project.findMany({
+      where: { status: 'Active' },
       select: {
         id: true,
         name: true,
@@ -62,7 +64,9 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             lineItems: {
-              select: { id: true, description: true, revisedBudget: true },
+              select: { id: true, description: true },
+              // Limit line items per category to keep prompt size manageable
+              take: 30,
             },
           },
         },
@@ -70,12 +74,7 @@ export async function POST(request: NextRequest) {
     });
 
     const vendors = await prisma.vendor.findMany({
-      select: {
-        id: true,
-        name: true,
-        company: true,
-        category: true,
-      },
+      select: { id: true, name: true, company: true, category: true },
     });
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
         const categories = p.budgetCategories
           .map((cat) => {
             const items = cat.lineItems
-              .map((li) => `      - LineItem ID: "${li.id}" | Name: "${li.description}" | Budget: $${li.revisedBudget}`)
+              .map((li) => `      - LineItem ID: "${li.id}" | Name: "${li.description}"`)
               .join('\n');
             return `    Category: "${cat.name}" (ID: "${cat.id}")\n${items}`;
           })
@@ -163,8 +162,16 @@ Guidelines:
 - For the amount, use the total amount due (including tax if shown).`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          // Cache the project/vendor context — same across all invoice calls
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [
         {
           role: 'user',
@@ -179,14 +186,14 @@ Guidelines:
             },
             {
               type: 'text',
-              text: systemPrompt,
+              text: 'Extract all invoices from this PDF and return the JSON response.',
             },
           ],
         },
       ],
-    });
+    } as Parameters<typeof anthropic.messages.create>[0]) as Awaited<ReturnType<typeof anthropic.messages.create>> & { content: Array<{ type: string; text?: string }> };
 
-    const textBlock = response.content.find((block) => block.type === 'text');
+    const textBlock = response.content.find((block: { type: string }) => block.type === 'text') as { type: 'text'; text: string } | undefined;
     if (!textBlock || textBlock.type !== 'text') {
       return NextResponse.json(
         { error: 'No text response received from AI' },
