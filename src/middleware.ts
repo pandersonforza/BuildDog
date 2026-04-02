@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionTokenFromCookie } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/register", "/bid", "/api/auth", "/api/bids"];
+const PUBLIC_PATHS = ["/login", "/register", "/bid", "/api/auth", "/api/bids", "/api/email/inbound"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
