@@ -91,41 +91,43 @@ export function PendingApprovals() {
           {invoices.length === 0 ? (
             <p className="text-muted-foreground text-sm">No invoices waiting for your approval.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {oldest5.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.vendorName}</TableCell>
-                    <TableCell>{formatCurrency(invoice.amount)}</TableCell>
-                    <TableCell>{invoice.project?.name ?? "—"}</TableCell>
-                    <TableCell>{invoice.submittedDate ? formatDate(invoice.submittedDate) : "—"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setReviewingInvoice(invoice)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {invoices.length > 5 && (
-              <p className="text-xs text-muted-foreground mt-3">
-                Showing 5 oldest of {invoices.length} pending — go to the Invoices tab to see all.
-              </p>
-            )}
+                </TableHeader>
+                <TableBody>
+                  {oldest5.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">{invoice.vendorName}</TableCell>
+                      <TableCell>{formatCurrency(invoice.amount)}</TableCell>
+                      <TableCell>{invoice.project?.name ?? "—"}</TableCell>
+                      <TableCell>{invoice.submittedDate ? formatDate(invoice.submittedDate) : "—"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setReviewingInvoice(invoice)}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {invoices.length > 5 && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Showing 5 oldest of {invoices.length} pending — go to the Invoices tab to see all.
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
