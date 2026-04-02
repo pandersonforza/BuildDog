@@ -400,8 +400,8 @@ export function InvoiceList({
       <DataTable
         columns={columns}
         data={filteredInvoices}
-        searchKey="vendorName"
-        searchPlaceholder="Search invoices..."
+        searchKeys={["vendorName", "invoiceNumber"]}
+        searchPlaceholder="Search by vendor or invoice #..."
       />
 
       <InvoiceUpload
