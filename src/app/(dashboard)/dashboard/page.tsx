@@ -7,7 +7,6 @@ import { KPICards } from "@/components/dashboard/kpi-cards";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PendingApprovals } from "@/components/dashboard/pending-approvals";
 import { ReturnedInvoices } from "@/components/dashboard/returned-invoices";
-import { TaskList } from "@/components/dashboard/task-list";
 import { useAuth } from "@/hooks/use-auth";
 import { PROJECT_GROUPS } from "@/lib/constants";
 
@@ -81,13 +80,11 @@ export default function DashboardPage() {
       )}
 
       {canEdit && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <TaskList />
+        <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))]">
           <PendingApprovals />
+          <ReturnedInvoices />
         </div>
       )}
-
-      {canEdit && <ReturnedInvoices />}
 
       <ProjectStatusChart
         group={groupFilter}
