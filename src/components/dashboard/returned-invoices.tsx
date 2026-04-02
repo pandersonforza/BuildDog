@@ -142,15 +142,13 @@ export function ReturnedInvoices() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewingInvoice(null)}>Close</Button>
-              {viewingInvoice.project && (
-                <Link
-                  href={`/projects/${viewingInvoice.project.id}?tab=invoices`}
-                  onClick={() => setViewingInvoice(null)}
-                  className="inline-flex items-center justify-center h-10 px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  Go to Invoice
-                </Link>
-              )}
+              <Link
+                href="/invoices"
+                onClick={() => setViewingInvoice(null)}
+                className="inline-flex items-center justify-center h-10 px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Go to Invoices
+              </Link>
             </DialogFooter>
           </DialogContent>
         )}
