@@ -285,23 +285,38 @@ export function InvoiceUpload({
             handleUploadUrl: "/api/invoices/upload",
           });
 
-          // Process with AI
-          const processRes = await fetch("/api/invoices/process", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filePath: blob.url }),
-          });
+          // Process with AI — failures are non-fatal; push through with empty fields
+          let invoices: AIInvoiceResult[];
+          try {
+            const processRes = await fetch("/api/invoices/process", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filePath: blob.url }),
+            });
 
-          if (!processRes.ok) {
-            const err = await processRes.json().catch(() => ({}));
-            throw new Error(`Failed to process ${file.name}: ${err.error || "Unknown error"}`);
+            if (!processRes.ok) throw new Error("AI processing failed");
+
+            const raw = await processRes.json();
+            invoices = (raw.invoices || [raw]).map((inv: Record<string, unknown>) => ({
+              ...inv,
+              suggestedLineItemId: inv.suggestedLineItemId || inv.suggestedBudgetLineItemId || null,
+            }));
+          } catch {
+            // AI couldn't extract data — let the user fill in the fields manually
+            invoices = [{
+              vendorName: "",
+              invoiceNumber: null,
+              amount: 0,
+              date: new Date().toISOString().slice(0, 10),
+              description: "",
+              confidence: 0,
+              reasoning: "AI could not extract invoice data. Please fill in the fields manually.",
+              suggestedProjectId: null,
+              suggestedProjectName: null,
+              suggestedLineItemId: null,
+              suggestedLineItemName: null,
+            }];
           }
-
-          const raw = await processRes.json();
-          const invoices: AIInvoiceResult[] = (raw.invoices || [raw]).map((inv: Record<string, unknown>) => ({
-            ...inv,
-            suggestedLineItemId: inv.suggestedLineItemId || inv.suggestedBudgetLineItemId || null,
-          }));
 
           setProcessingProgress((prev) => prev + 1);
 
@@ -347,18 +362,11 @@ export function InvoiceUpload({
     }
   };
 
-  // Capture current form data as a reviewed invoice
-  const captureCurrentInvoice = (): ReviewedInvoice | null => {
-    if (!vendorName.trim()) {
-      toast({ title: "Validation error", description: "Vendor name is required", variant: "destructive" });
-      return null;
-    }
-    if (amount <= 0) {
-      toast({ title: "Validation error", description: "Amount must be greater than zero", variant: "destructive" });
-      return null;
-    }
+  // Capture current form data as a reviewed invoice — no hard validation,
+  // so partially-extracted invoices can always be pushed through to review.
+  const captureCurrentInvoice = (): ReviewedInvoice => {
     return {
-      vendorName: vendorName.trim(),
+      vendorName: vendorName.trim() || "",
       invoiceNumber: invoiceNumber.trim(),
       amount,
       date,
@@ -374,8 +382,6 @@ export function InvoiceUpload({
   // "Next" — save current form data and advance to next processed file
   const handleNext = () => {
     const invoice = captureCurrentInvoice();
-    if (!invoice) return;
-
     const updated = [...reviewedInvoices, invoice];
     setReviewedInvoices(updated);
 
@@ -418,13 +424,22 @@ export function InvoiceUpload({
       allInvoices = reviewedInvoices;
     } else {
       const current = captureCurrentInvoice();
-      if (!current) return;
       allInvoices = [...reviewedInvoices, current];
     }
 
     if (submitForApproval) {
       if (!approverId || !submittedBy.trim()) {
         toast({ title: "Validation error", description: "Approver is required when submitting for approval", variant: "destructive" });
+        return;
+      }
+      // Validate all invoices have the minimum required fields before submitting
+      const incomplete = allInvoices.filter((inv) => !inv.vendorName || inv.amount <= 0);
+      if (incomplete.length > 0) {
+        toast({
+          title: "Incomplete invoice",
+          description: `${incomplete.length} invoice(s) are missing a vendor name or amount. Please fill them in before submitting.`,
+          variant: "destructive",
+        });
         return;
       }
     }
