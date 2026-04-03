@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const approverId = searchParams.get('approverId');
     const submittedById = searchParams.get('submittedById');
     const returned = searchParams.get('returned');
+    const vendorName = searchParams.get('vendorName');
 
     const where: Record<string, unknown> = {};
 
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest) {
     }
     if (returned === 'true') {
       where.rejectionReason = { not: null };
+    }
+    if (vendorName) {
+      where.vendorName = { equals: vendorName, mode: 'insensitive' };
     }
 
     const invoices = await prisma.invoice.findMany({

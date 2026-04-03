@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { SearchableSelect, SelectNative } from "@/components/ui/select";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, AlertTriangle } from "lucide-react";
 
 export interface InvoiceForApproval {
   id: string;
@@ -55,6 +55,7 @@ export function InvoiceApprovalDialog({
   const [showReturnInput, setShowReturnInput] = useState(false);
   const [returnReason, setReturnReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [duplicates, setDuplicates] = useState<{ id: string; invoiceNumber: string | null; amount: number; status: string; project: { name: string } | null }[]>([]);
   const { toast } = useToast();
 
   // Populate form when invoice changes
@@ -70,11 +71,26 @@ export function InvoiceApprovalDialog({
     setSelectedLineItemId(invoice.lineItem?.id || "");
     setShowReturnInput(false);
     setReturnReason("");
-    // Fetch projects
+    setDuplicates([]);
+    // Fetch projects and check for duplicates in parallel
     fetch("/api/projects")
       .then((r) => r.ok ? r.json() : [])
       .then(setProjects)
       .catch(() => setProjects([]));
+    fetch(`/api/invoices?vendorName=${encodeURIComponent(invoice.vendorName)}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((all: { id: string; invoiceNumber: string | null; amount: number; status: string; project: { name: string } | null }[]) => {
+        const dupes = all.filter((inv) => {
+          if (inv.id === invoice.id) return false;
+          if (inv.status === "Rejected") return false;
+          const sameInvoiceNumber = invoice.invoiceNumber && inv.invoiceNumber &&
+            inv.invoiceNumber.trim().toLowerCase() === invoice.invoiceNumber.trim().toLowerCase();
+          const sameAmount = Math.abs(inv.amount - invoice.amount) < 0.01;
+          return sameInvoiceNumber || sameAmount;
+        });
+        setDuplicates(dupes);
+      })
+      .catch(() => setDuplicates([]));
   }, [invoice, open]);
 
   // Fetch line items when project changes
@@ -101,6 +117,7 @@ export function InvoiceApprovalDialog({
     setShowReturnInput(false);
     setReturnReason("");
     setLineItems([]);
+    setDuplicates([]);
   };
 
   const handleApprove = async () => {
@@ -196,6 +213,25 @@ export function InvoiceApprovalDialog({
 
           {/* Details — right */}
           <div className="overflow-y-auto max-h-[60vh] pr-1 space-y-4">
+            {/* Duplicate warning */}
+            {duplicates.length > 0 && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 flex gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-600">Possible duplicate invoice</p>
+                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                    {duplicates.map((d) => (
+                      <li key={d.id}>
+                        {d.invoiceNumber ? `#${d.invoiceNumber} · ` : ""}
+                        ${d.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {d.project ? ` · ${d.project.name}` : ""} —{" "}
+                        <span className="capitalize">{d.status}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             {/* Pay app items */}
             {isPayApp && (
               <div className="border border-border rounded-lg overflow-hidden">
