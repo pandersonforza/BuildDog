@@ -432,16 +432,6 @@ export function InvoiceUpload({
         toast({ title: "Validation error", description: "Approver is required when submitting for approval", variant: "destructive" });
         return;
       }
-      // Validate all invoices have the minimum required fields before submitting
-      const incomplete = allInvoices.filter((inv) => !inv.vendorName || inv.amount <= 0);
-      if (incomplete.length > 0) {
-        toast({
-          title: "Incomplete invoice",
-          description: `${incomplete.length} invoice(s) are missing a vendor name or amount. Please fill them in before submitting.`,
-          variant: "destructive",
-        });
-        return;
-      }
     }
 
     setStep("saving");
