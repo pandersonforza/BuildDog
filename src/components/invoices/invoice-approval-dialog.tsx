@@ -297,26 +297,28 @@ export function InvoiceApprovalDialog({
                   }))}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label>Budget Line Item</Label>
-                {!selectedProjectId ? (
-                  <p className="text-sm text-muted-foreground">Select a project first</p>
-                ) : loadingLineItems ? (
-                  <p className="text-sm text-muted-foreground">Loading line items...</p>
-                ) : lineItems.length === 0 ? (
-                  <p className="text-sm text-amber-600">No line items found for this project</p>
-                ) : (
-                  <SelectNative
-                    value={selectedLineItemId}
-                    onChange={(e) => setSelectedLineItemId(e.target.value)}
-                    placeholder="Select a line item"
-                    options={lineItems.map((li) => ({
-                      value: li.id,
-                      label: `${li.category.name} — ${li.description}`,
-                    }))}
-                  />
-                )}
-              </div>
+              {!isPayApp && (
+                <div className="space-y-1.5">
+                  <Label>Budget Line Item</Label>
+                  {!selectedProjectId ? (
+                    <p className="text-sm text-muted-foreground">Select a project first</p>
+                  ) : loadingLineItems ? (
+                    <p className="text-sm text-muted-foreground">Loading line items...</p>
+                  ) : lineItems.length === 0 ? (
+                    <p className="text-sm text-amber-600">No line items found for this project</p>
+                  ) : (
+                    <SelectNative
+                      value={selectedLineItemId}
+                      onChange={(e) => setSelectedLineItemId(e.target.value)}
+                      placeholder="Select a line item"
+                      options={lineItems.map((li) => ({
+                        value: li.id,
+                        label: `${li.category.name} — ${li.description}`,
+                      }))}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Return reason — shown only when returning */}
