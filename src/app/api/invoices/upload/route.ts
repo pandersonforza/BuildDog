@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
+    console.error('[/api/invoices/upload] handleUpload error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: `Failed to upload file: ${message}` },
