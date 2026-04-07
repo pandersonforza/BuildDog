@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectTabsNavProps {
   projectId: string;
@@ -16,15 +17,20 @@ const tabs = [
   { label: "Bids", href: "/bids" },
   { label: "Milestones", href: "/milestones" },
   { label: "Notes", href: "/notes" },
+  { label: "Distribution", href: "/distribution", adminOnly: true },
 ];
 
 export function ProjectTabsNav({ projectId }: ProjectTabsNavProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const basePath = `/projects/${projectId}`;
 
+  const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
+
   return (
-    <nav className="flex border-b border-border mb-6">
-      {tabs.map((tab) => {
+    <nav className="flex border-b border-border mb-6 overflow-x-auto">
+      {visibleTabs.map((tab) => {
         const href = `${basePath}${tab.href}`;
         const isActive =
           tab.href === ""
@@ -36,7 +42,7 @@ export function ProjectTabsNav({ projectId }: ProjectTabsNavProps) {
             key={tab.label}
             href={href}
             className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
               isActive
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
