@@ -112,7 +112,7 @@ const s = StyleSheet.create({
 
   // Header
   header: { backgroundColor: C.navy, paddingHorizontal: 36, paddingTop: 28, paddingBottom: 24 },
-  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  headerTop: { flexDirection: "row", justifyContent: "flex-end", alignItems: "flex-start" },
   headerLogo: { fontSize: 13, fontFamily: "Helvetica-Bold", color: C.white, letterSpacing: 1 },
   headerTagline: { fontSize: 7, color: "#94a3b8", marginTop: 2 },
   headerRight: { alignItems: "flex-end" },
@@ -237,10 +237,6 @@ function DistributionDocument(p: DistributionPDFProps) {
         {/* ── Header ── */}
         <View style={s.header}>
           <View style={s.headerTop}>
-            <View>
-              <Text style={s.headerLogo}>PROPHOUND</Text>
-              <Text style={s.headerTagline}>Real Estate Investment Platform</Text>
-            </View>
             <View style={s.headerRight}>
               <Text style={s.reportTitle}>{reportTitle}</Text>
               {projectName && (
