@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectTabsNavProps {
   projectId: string;
@@ -17,20 +16,16 @@ const tabs = [
   { label: "Bids", href: "/bids" },
   { label: "Milestones", href: "/milestones" },
   { label: "Notes", href: "/notes" },
-  { label: "Distribution", href: "/distribution", adminOnly: true },
+  { label: "Distribution", href: "/distribution" },
 ];
 
 export function ProjectTabsNav({ projectId }: ProjectTabsNavProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
   const basePath = `/projects/${projectId}`;
-
-  const visibleTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
 
   return (
     <nav className="flex border-b border-border mb-6 overflow-x-auto">
-      {visibleTabs.map((tab) => {
+      {tabs.map((tab) => {
         const href = `${basePath}${tab.href}`;
         const isActive =
           tab.href === ""
