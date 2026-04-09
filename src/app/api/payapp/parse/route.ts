@@ -99,10 +99,8 @@ Rules:
 
     return NextResponse.json({ items });
   } catch (err) {
-    console.error("[api/payapp/parse] Anthropic API error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to parse PDF" },
-      { status: 500 }
-    );
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[api/payapp/parse] Anthropic API error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

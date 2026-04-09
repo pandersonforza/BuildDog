@@ -234,8 +234,16 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         });
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error || "Failed to parse PDF");
+          // Read body as text first so we don't lose Vercel's 413 / plain-text errors
+          const body = await res.text().catch(() => "");
+          let msg = `HTTP ${res.status}`;
+          try {
+            const parsed = JSON.parse(body) as { error?: string };
+            if (parsed.error) msg = parsed.error;
+          } catch {
+            if (body) msg = body.slice(0, 200);
+          }
+          throw new Error(msg);
         }
 
         const data = await res.json() as { items: Array<{ description: string; amount: number }> };
