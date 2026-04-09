@@ -103,20 +103,44 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
+        // Normalize a string for comparison: lowercase, collapse whitespace, strip punctuation
+        const normalize = (s: string) =>
+          s.toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "").trim();
+
         let matched = 0;
         setItems((prev) => {
           const updated = [...prev];
           for (const row of rows) {
-            // Try to find a matching line item by description
-            const desc = String(row["Line Item"] || row["Description"] || row["description"] || row["line item"] || "").trim();
-            const amount = parseFloat(String(row["This Period"] || row["Amount"] || row["this period"] || row["amount"] || 0)) || 0;
+            // Accept any plausible column name for the description
+            const descRaw = String(
+              row["Line Item"] ?? row["line item"] ?? row["Description"] ??
+              row["description"] ?? row["Item"] ?? row["item"] ?? ""
+            ).trim();
 
-            if (!desc || amount <= 0) continue;
-
-            // Fuzzy match: case-insensitive, trim whitespace
-            const idx = updated.findIndex(
-              (item) => item.description.toLowerCase().trim() === desc.toLowerCase()
+            // Accept any plausible column name for the amount
+            const amountRaw = String(
+              row["This Period"] ?? row["this period"] ?? row["Amount"] ??
+              row["amount"] ?? row["Current"] ?? row["current"] ??
+              row["Billing"] ?? row["billing"] ?? 0
             );
+            const amount = parseFloat(amountRaw) || 0;
+
+            if (!descRaw || amount <= 0) continue;
+
+            const descNorm = normalize(descRaw);
+
+            // 1. Exact normalized match
+            let idx = updated.findIndex((item) => normalize(item.description) === descNorm);
+
+            // 2. Fallback: one description contains the other
+            if (idx < 0) {
+              idx = updated.findIndex(
+                (item) =>
+                  normalize(item.description).includes(descNorm) ||
+                  descNorm.includes(normalize(item.description))
+              );
+            }
+
             if (idx >= 0) {
               updated[idx] = { ...updated[idx], currentAmount: amount };
               matched++;
