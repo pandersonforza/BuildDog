@@ -43,12 +43,17 @@ export async function POST(request: Request) {
 
 Extract the Schedule of Values line items. For each item return:
 - description: exact text from the Schedule of Values
-- amount: the "This Period" / "Work Completed This Period" dollar amount (NOT total contract value)
+- amount: the NET amount for this period = "This Period" (column E or "Work Completed This Period") MINUS the retainage withheld on that amount
+
+To calculate retainage per line item:
+1. If the PDF shows a retainage column per line, subtract that figure from the This Period amount
+2. If retainage is shown as a percentage (e.g. 10%), multiply This Period amount by that rate to get the retainage, then subtract
+3. If no retainage is shown, use the This Period amount as-is
 
 Return ONLY valid JSON, no markdown:
 {"items":[{"description":"string","amount":number}]}
 
-Only include items where the This Period amount is greater than 0.
+Only include items where the net amount is greater than 0.
 Amounts must be plain numbers with no $ or commas.
 If no Schedule of Values is found, return {"items":[]}.`,
             },
