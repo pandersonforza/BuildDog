@@ -3,11 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Menu,
-  X,
-  LayoutList,
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -24,7 +20,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/projects", label: "Projects" },
-  { href: "/pipeline", label: "Pipeline", icon: LayoutList },
+  { href: "/pipeline", label: "Pipeline" },
   { href: "/invoices", label: "Invoices" },
   { href: "/milestones", label: "Milestones" },
   { href: "/track-record", label: "Track Record" },
