@@ -51,7 +51,7 @@ interface PayAppFormItem {
 
 interface PdfExtractedItem {
   description: string;
-  amount: number;
+  grossAmount: number;       // raw "This Period" from Claude
   matchedLineItemId: string | null;
   manualLineItemId: string;
 }
@@ -85,6 +85,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
 
   const [pdfParsing, setPdfParsing] = useState(false);
   const [pdfItems, setPdfItems] = useState<PdfExtractedItem[]>([]);
+  const [retainagePct, setRetainagePct] = useState(10);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
   // Download a blank template with line item descriptions
@@ -259,7 +260,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
           throw new Error(msg);
         }
 
-        const data = await res.json() as { items: Array<{ description: string; amount: number }> };
+        const data = await res.json() as { items: Array<{ description: string; amount: number; grossAmount?: number }> };
         const extractedItems = data.items ?? [];
 
         // Match each extracted item against budget line items
@@ -283,7 +284,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
 
           return {
             description: extracted.description,
-            amount: extracted.amount,
+            grossAmount: extracted.grossAmount ?? extracted.amount,  // store raw amount
             matchedLineItemId: found ? found.lineItemId : null,
             manualLineItemId: "",
           };
@@ -308,8 +309,9 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     e.target.value = "";
   };
 
-  // Apply PDF extracted items to the grid
+  // Apply PDF extracted items to the grid (net = gross × (1 − retainage%))
   const applyPdfItems = () => {
+    const rate = Math.min(Math.max(retainagePct, 0), 100) / 100;
     let applied = 0;
     setItems((prev) => {
       const updated = [...prev];
@@ -318,7 +320,8 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         if (!targetId) continue;
         const idx = updated.findIndex((item) => item.lineItemId === targetId);
         if (idx >= 0) {
-          updated[idx] = { ...updated[idx], currentAmount: pdfItem.amount };
+          const net = Math.round(pdfItem.grossAmount * (1 - rate) * 100) / 100;
+          updated[idx] = { ...updated[idx], currentAmount: net };
           applied++;
         }
       }
@@ -703,7 +706,21 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
             {pdfItems.length > 0 && (
               <div className="border border-border rounded-lg overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
-                  <span className="text-sm font-semibold text-foreground">PDF Extracted Items</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-foreground">PDF Extracted Items</span>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs text-muted-foreground">Retainage %</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={retainagePct}
+                        onChange={(e) => setRetainagePct(parseFloat(e.target.value) || 0)}
+                        className="h-7 w-20 text-sm text-right"
+                      />
+                    </div>
+                  </div>
                   <Button type="button" size="sm" onClick={applyPdfItems}>
                     Apply to Grid
                   </Button>
@@ -713,7 +730,8 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                     <thead>
                       <tr className="border-b border-border bg-muted/20 text-left text-muted-foreground">
                         <th className="py-2 px-3">Description</th>
-                        <th className="py-2 px-3 text-right w-32">Amount</th>
+                        <th className="py-2 px-3 text-right w-28">Gross</th>
+                        <th className="py-2 px-3 text-right w-28">Net (after ret.)</th>
                         <th className="py-2 px-3 w-24">Status</th>
                         <th className="py-2 px-3">Budget Line Item</th>
                       </tr>
@@ -723,10 +741,13 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                         const matchedItem = pdfItem.matchedLineItemId
                           ? items.find((i) => i.lineItemId === pdfItem.matchedLineItemId)
                           : null;
+                        const rate = Math.min(Math.max(retainagePct, 0), 100) / 100;
+                        const net = Math.round(pdfItem.grossAmount * (1 - rate) * 100) / 100;
                         return (
                           <tr key={idx} className="border-b border-border/50 hover:bg-muted/20">
                             <td className="py-1.5 px-3 text-foreground">{pdfItem.description}</td>
-                            <td className="py-1.5 px-3 text-right">{formatCurrency(pdfItem.amount)}</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">{formatCurrency(pdfItem.grossAmount)}</td>
+                            <td className="py-1.5 px-3 text-right font-medium">{formatCurrency(net)}</td>
                             <td className="py-1.5 px-3">
                               {matchedItem ? (
                                 <span className="flex items-center gap-1 text-green-500">

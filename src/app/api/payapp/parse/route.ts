@@ -41,24 +41,17 @@ export async function POST(request: Request) {
               type: "text",
               text: `You are a construction pay application (AIA G702/G703) parser.
 
-STEP 1 — Find the retainage rate:
-- Look on the G702 cover page for a retainage percentage (e.g. "10% retainage", "Retainage: 10%", or a line showing retainage as a % of work completed).
-- If you find it, store it as a decimal (e.g. 10% → 0.10).
-- If the G703 continuation sheet has a "Retainage" dollar column per line, use those figures instead.
-- If no retainage information exists anywhere, use 0.
-
-STEP 2 — Extract each Schedule of Values line item from the G703 continuation sheet:
+Extract each line item from the Schedule of Values (G703 continuation sheet).
+For each item return:
 - description: the exact work description text
-- grossAmount: the "Work Completed This Period" or "This Period" dollar amount (column E). Do NOT use column C (Scheduled Value) or column G (Total to Date).
-- amount: grossAmount × (1 − retainageRate), rounded to 2 decimal places.
-  If the G703 has a per-line retainage dollar column, use: grossAmount − thatRetainageColumn instead.
+- amount: the GROSS "Work Completed This Period" dollar amount (column E). Do NOT subtract retainage — return the raw column E figure. Do NOT use column C (Scheduled Value) or column G (Total to Date).
 
 Return ONLY valid JSON, no markdown fences:
-{"retainageRate":0.10,"items":[{"description":"string","grossAmount":1000,"amount":900}]}
+{"items":[{"description":"string","amount":number}]}
 
-Only include items where grossAmount > 0.
-All dollar values must be plain numbers (no $ or commas).
-If no Schedule of Values is found, return {"retainageRate":0,"items":[]}.`,
+Only include items where the This Period amount (column E) is greater than 0.
+Amounts must be plain numbers with no $ or commas.
+If no Schedule of Values is found, return {"items":[]}.`,
             },
           ],
         },
@@ -74,7 +67,7 @@ If no Schedule of Values is found, return {"retainageRate":0,"items":[]}.`,
 
     const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
 
-    let parsed: { retainageRate?: number; items?: Array<{ description: string; grossAmount?: number; amount: number }> };
+    let parsed: { items?: Array<{ description: string; amount: number }> };
     try {
       parsed = JSON.parse(cleaned);
     } catch {
@@ -82,10 +75,8 @@ If no Schedule of Values is found, return {"retainageRate":0,"items":[]}.`,
       return NextResponse.json({ error: `Claude returned non-JSON: ${cleaned.slice(0, 100)}` }, { status: 500 });
     }
 
-    console.log("[payapp/parse] Retainage rate:", parsed.retainageRate ?? 0);
-
     const items = (parsed.items ?? [])
-      .filter((i) => i && typeof i.description === "string" && (i.grossAmount ?? i.amount) > 0)
+      .filter((i) => i && typeof i.description === "string" && typeof i.amount === "number" && i.amount > 0)
       .map((i) => ({ description: i.description.trim(), amount: Math.round(i.amount * 100) / 100 }))
       .filter((i) => i.amount > 0);
 
