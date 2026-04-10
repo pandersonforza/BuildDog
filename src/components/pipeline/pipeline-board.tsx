@@ -952,6 +952,23 @@ function ProjectDetail({
         </div>
       </div>
 
+      {/* Map */}
+      {(form.address && form.city) && (
+        <div className="shrink-0 border-b border-border">
+          <iframe
+            title="Project location"
+            width="100%"
+            height="180"
+            style={{ display: "block" }}
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(
+              [form.address, form.city, form.state].filter(Boolean).join(", ")
+            )}&output=embed&z=15`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+      )}
+
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
         {/* Development Notes */}
