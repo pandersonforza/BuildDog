@@ -815,7 +815,7 @@ function ProjectDetail({
             value={form.projectNumber ?? ""}
             onChange={(e) => setField("projectNumber", e.target.value || null)}
             placeholder="#ID"
-            className="w-14 shrink-0 font-mono text-xs font-semibold text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-20 shrink-0 font-mono text-xs font-semibold text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <span className="text-muted-foreground/40 shrink-0">·</span>
           <input
@@ -830,7 +830,7 @@ function ProjectDetail({
             value={form.city}
             onChange={(e) => setField("city", e.target.value)}
             placeholder="City"
-            className="w-24 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-36 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <input
             type="text"
