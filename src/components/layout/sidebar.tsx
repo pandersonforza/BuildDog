@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X, PanelLeftClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -30,9 +30,11 @@ const navItems: NavItem[] = [
 interface SidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
-export function Sidebar({ open, onOpenChange }: SidebarProps) {
+export function Sidebar({ open, onOpenChange, collapsed = false, onToggleCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
@@ -53,8 +55,9 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform duration-200 lg:static lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card transition-all duration-200 lg:static lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+          collapsed ? "lg:w-0 lg:overflow-hidden lg:border-r-0" : "w-64"
         )}
       >
         {/* Logo */}
@@ -62,14 +65,27 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
           <Link href="/dashboard" className="flex items-center">
             <Logo />
           </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {onToggleCollapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden lg:flex"
+                onClick={onToggleCollapsed}
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Navigation */}

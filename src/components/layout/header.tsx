@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, LogOut } from "lucide-react";
+import { ChevronRight, LogOut, PanelLeftOpen } from "lucide-react";
 import { SidebarTrigger } from "./sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,11 @@ function isId(segment: string) {
 
 interface HeaderProps {
   onMenuClick: () => void;
+  sidebarCollapsed?: boolean;
+  onExpandSidebar?: () => void;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, sidebarCollapsed, onExpandSidebar }: HeaderProps) {
   const pathname = usePathname();
   const [nameCache, setNameCache] = useState<Record<string, { name: string; address?: string }>>({});
   const { user, logout } = useAuth();
@@ -73,6 +75,17 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="flex h-16 items-center gap-4 border-b border-border bg-card px-6">
       <SidebarTrigger onClick={onMenuClick} />
+      {sidebarCollapsed && onExpandSidebar && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:flex"
+          onClick={onExpandSidebar}
+          title="Expand sidebar"
+        >
+          <PanelLeftOpen className="h-4 w-4" />
+        </Button>
+      )}
 
       <nav className="flex items-center gap-1 text-sm">
         {breadcrumbs.map((crumb, index) => (
