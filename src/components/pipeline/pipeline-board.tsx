@@ -746,23 +746,6 @@ function ProjectDetail({
     [project.address, project.city, project.state].filter(Boolean).join(", ")
   );
 
-  const handleLocationChange = React.useCallback(
-    (value: string) => {
-      setLocationText(value);
-      const parts = value.split(",").map((s) => s.trim());
-      const address = parts.length >= 3 ? parts.slice(0, -2).join(", ") : parts[0] ?? "";
-      const city = parts.length >= 2 ? parts[parts.length - 2] : "";
-      const state = parts.length >= 3 ? parts[parts.length - 1] || null : null;
-      setFormState((prev) => {
-        const updated = { ...prev, address, city, state };
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(() => doSave(updated), 800);
-        return updated;
-      });
-    },
-    [doSave]
-  );
-
   // Note compose state
   const [composingNote, setComposingNote] = React.useState(false);
   const [noteText, setNoteText] = React.useState("");
@@ -787,6 +770,23 @@ function ProjectDetail({
       }
     },
     [onUpdated, toast]
+  );
+
+  const handleLocationChange = React.useCallback(
+    (value: string) => {
+      setLocationText(value);
+      const parts = value.split(",").map((s) => s.trim());
+      const address = parts.length >= 3 ? parts.slice(0, -2).join(", ") : parts[0] ?? "";
+      const city = parts.length >= 2 ? parts[parts.length - 2] : "";
+      const state = parts.length >= 3 ? parts[parts.length - 1] || null : null;
+      setFormState((prev) => {
+        const updated = { ...prev, address, city, state };
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => doSave(updated), 800);
+        return updated;
+      });
+    },
+    [doSave]
   );
 
   const setField = React.useCallback(
