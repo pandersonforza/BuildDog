@@ -157,19 +157,6 @@ const PROGRESS_STAGES: StageName[] = [
   "Open",
 ];
 
-// Field that marks each stage as completed
-const STAGE_COMPLETION_FIELD: Partial<Record<StageName, keyof PipelineProject>> = {
-  "Site Accepted": "siteAcceptance",
-  "Test Fit":      "testFitApproved",
-  "LOI":           "loiExecuted",
-  "Lease Signed":  "leaseExecuted",
-  "CD Phase":      "cdKickoffCall",
-  "Design":        "designDocsApproved",
-  "Bidding":       "outToBid",
-  "Permitted":     "permitsIssued",
-  "Construction":  "constructionStart",
-  "Open":          "openDate",
-};
 
 // ---------------------------------------------------------------------------
 // Checklist sections
@@ -190,15 +177,6 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
       { key: "phase1Testing", label: "Phase 1 Testing" },
       { key: "asbestosTesting", label: "Asbestos Testing" },
       { key: "sir", label: "SIR" },                          // moved from Leasing
-    ],
-  },
-  {
-    label: "Signage",
-    fields: [
-      // signageVendor moved to Teams section
-      { key: "signResourcePm", label: "Sign Resource PM" },
-      { key: "sentTo7B", label: "Sent to 7B" },
-      { key: "signageApprovedBy7B", label: "Signage Approved by 7B" },
     ],
   },
   {
@@ -226,6 +204,7 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
       { key: "powerApplicationSubmitted", label: "Power Application Submitted" },
       { key: "designKickoffCall", label: "Design Kickoff Call" },
       { key: "designDocsApproved", label: "Design Docs Approved" },
+      { key: "signageApprovedBy7B", label: "Signage Approved by 7B" },
     ],
   },
   {
@@ -904,7 +883,6 @@ function ProjectDetail({
   }, [doSave]);
 
   const stage = getStage(form);
-  const stageIdx = PROGRESS_STAGES.indexOf(stage);
   const parsedNotes = React.useMemo(
     () => parseNotes(form.developmentNotes ?? ""),
     [form.developmentNotes]
@@ -1006,40 +984,33 @@ function ProjectDetail({
         </div>
       </div>
 
-      {/* Stage progress strip */}
+      {/* Stage progress strip — one cell per checklist section */}
       <div className="shrink-0 border-b border-border bg-muted/20 px-4 py-3">
         <div className="flex items-start w-full">
-          {PROGRESS_STAGES.map((s, i) => {
-            const isCurrent = i === stageIdx;
-            const isLast = i === PROGRESS_STAGES.length - 1;
-            const field = STAGE_COMPLETION_FIELD[s];
-            const isDone = s === "Prospect" || (field ? !!form[field] : false);
+          {CHECKLIST_SECTIONS.map((section) => {
+            const total = section.fields.length;
+            const done = section.fields.filter((f) =>
+              isChecked(form[f.key] as string | null)
+            ).length;
+            const dotClass =
+              done === 0
+                ? "bg-transparent border-border"
+                : done === total
+                ? "bg-green-500 border-transparent"
+                : "bg-orange-400 border-transparent";
+            const labelClass =
+              done === 0
+                ? "text-muted-foreground"
+                : done === total
+                ? "text-green-600"
+                : "text-orange-500";
             return (
-              <React.Fragment key={s}>
-                {/* Stage cell — equal width */}
-                <div className="flex flex-1 flex-col items-center gap-1">
-                  <div
-                    className={`h-2 w-2 rounded-full border ${
-                      isCurrent
-                        ? `${STAGE_DOT_COLORS[s]} border-transparent scale-125`
-                        : isDone
-                        ? "bg-green-400 border-transparent"
-                        : "bg-transparent border-border"
-                    }`}
-                  />
-                  <span
-                    className={`text-[10px] text-center font-medium leading-tight ${
-                      isCurrent
-                        ? "text-foreground"
-                        : isDone
-                        ? "text-green-600"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {s}
-                  </span>
-                </div>
-              </React.Fragment>
+              <div key={section.label} className="flex flex-1 flex-col items-center gap-1">
+                <div className={`h-2 w-2 rounded-full border ${dotClass}`} />
+                <span className={`text-[10px] text-center font-medium leading-tight ${labelClass}`}>
+                  {section.label}
+                </span>
+              </div>
             );
           })}
         </div>
