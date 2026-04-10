@@ -741,6 +741,28 @@ function ProjectDetail({
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle");
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  // Combined location input state (address, city, state as one field)
+  const [locationText, setLocationText] = React.useState(
+    [project.address, project.city, project.state].filter(Boolean).join(", ")
+  );
+
+  const handleLocationChange = React.useCallback(
+    (value: string) => {
+      setLocationText(value);
+      const parts = value.split(",").map((s) => s.trim());
+      const address = parts.length >= 3 ? parts.slice(0, -2).join(", ") : parts[0] ?? "";
+      const city = parts.length >= 2 ? parts[parts.length - 2] : "";
+      const state = parts.length >= 3 ? parts[parts.length - 1] || null : null;
+      setFormState((prev) => {
+        const updated = { ...prev, address, city, state };
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => doSave(updated), 800);
+        return updated;
+      });
+    },
+    [doSave]
+  );
+
   // Note compose state
   const [composingNote, setComposingNote] = React.useState(false);
   const [noteText, setNoteText] = React.useState("");
@@ -850,24 +872,10 @@ function ProjectDetail({
           <span className="text-muted-foreground/40 shrink-0">·</span>
           <input
             type="text"
-            value={form.address}
-            onChange={(e) => setField("address", e.target.value)}
-            placeholder="Address"
+            value={locationText}
+            onChange={(e) => handleLocationChange(e.target.value)}
+            placeholder="Address, City, ST"
             className="text-base font-bold bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40 min-w-0 flex-1"
-          />
-          <input
-            type="text"
-            value={form.city}
-            onChange={(e) => setField("city", e.target.value)}
-            placeholder="City"
-            className="w-40 shrink-0 text-base text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
-          />
-          <input
-            type="text"
-            value={form.state ?? ""}
-            onChange={(e) => setField("state", e.target.value || null)}
-            placeholder="ST"
-            className="w-9 shrink-0 text-base text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
           <span className="text-muted-foreground/40 shrink-0">·</span>
           <input
