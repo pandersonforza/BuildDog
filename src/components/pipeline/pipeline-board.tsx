@@ -969,7 +969,7 @@ function ProjectDetail({
           <iframe
             title="Project location"
             width="100%"
-            height={meetingMode ? 500 : 250}
+            height={meetingMode ? 450 : 250}
             style={{ display: "block" }}
             src={`https://maps.google.com/maps?q=${encodeURIComponent(
               [form.address, form.city, form.state].filter(Boolean).join(", ")
