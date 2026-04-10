@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/use-auth";
 import { PipelineDialog } from "./pipeline-dialog";
 
 // ---------------------------------------------------------------------------
@@ -252,6 +253,54 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Note helpers
+// ---------------------------------------------------------------------------
+
+interface ParsedNote {
+  initials: string;
+  date: string;
+  text: string;
+}
+
+function parseNotes(raw: string): ParsedNote[] {
+  return raw
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((line) => {
+      const m = line.match(/^([A-Z]{1,4})-(\d{1,2})-(\d{1,2})-\s*(.*)$/);
+      if (m) return { initials: m[1], date: `${m[2]}/${m[3]}`, text: m[4] };
+      return { initials: "•", date: "", text: line };
+    });
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 4) || "?";
+}
+
+function formatNewNote(initials: string, text: string): string {
+  const now = new Date();
+  return `${initials}-${now.getMonth() + 1}-${now.getDate()}- ${text.trim()}`;
+}
+
+const AVATAR_COLORS = [
+  "bg-blue-500", "bg-purple-500", "bg-green-500",
+  "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-indigo-500",
+];
+
+function InitialsAvatar({ initials }: { initials: string }) {
+  const idx = (initials.codePointAt(0) ?? 0) % AVATAR_COLORS.length;
+  return (
+    <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${AVATAR_COLORS[idx]}`}>
+      {initials === "•" ? "•" : initials.slice(0, 2)}
+    </span>
+  );
+}
+
 function isChecked(value: string | null): boolean {
   if (!value) return false;
   const v = value.trim().toUpperCase();
@@ -409,18 +458,22 @@ export function PipelineBoard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keyboard navigation — all four arrow keys always navigate projects,
-  // regardless of what element is focused (including inputs/textareas).
+  // Keyboard navigation — all four arrow keys navigate projects,
+  // EXCEPT when the note-compose textarea is focused (so cursor moves freely there).
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (dialogOpen) return;
       const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
       if (!isArrow) return;
 
-      // Prevent cursor movement in any focused input/textarea
+      // Let arrow keys work normally inside the note compose textarea
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.dataset?.noteCompose) return;
+
+      // Prevent cursor movement in any other focused input/textarea
       e.preventDefault();
       // Blur so the active field doesn't keep capturing subsequent events
-      (document.activeElement as HTMLElement | null)?.blur();
+      active?.blur();
 
       const filtered = filteredProjects;
       const idx = filtered.findIndex((p) => p.id === selectedId);
@@ -661,9 +714,14 @@ function ProjectDetail({
   onUpdated: (project: PipelineProject) => void;
 }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [form, setFormState] = React.useState<PipelineProject>(project);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle");
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Note compose state
+  const [composingNote, setComposingNote] = React.useState(false);
+  const [noteText, setNoteText] = React.useState("");
 
   const doSave = React.useCallback(
     async (data: PipelineProject) => {
@@ -712,6 +770,25 @@ function ProjectDetail({
     },
     [doSave]
   );
+
+  const submitNote = React.useCallback(() => {
+    const text = noteText.trim();
+    if (!text) return;
+    const initials = user ? getInitials(user.name) : "?";
+    const line = formatNewNote(initials, text);
+    setFormState((prev) => {
+      const existing = prev.developmentNotes?.trim();
+      const updated = {
+        ...prev,
+        developmentNotes: existing ? `${line}\n${existing}` : line,
+      };
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      doSave(updated);
+      return updated;
+    });
+    setNoteText("");
+    setComposingNote(false);
+  }, [noteText, user, doSave]);
 
   const stage = getStage(form);
   const stageIdx = PROGRESS_STAGES.indexOf(stage);
@@ -871,18 +948,115 @@ function ProjectDetail({
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
         {/* Development Notes */}
         <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Development Notes
-          </p>
-          <p className="mb-1 text-[10px] text-muted-foreground/70">
-            Format: <code className="bg-muted px-0.5 rounded">INITIALS-M-D- Note text</code>
-          </p>
-          <InlineTextarea
-            value={form.developmentNotes}
-            onChange={(v) => setField("developmentNotes", v)}
-            placeholder="e.g. JD-4-10- Submitted plans to city…"
-            rows={5}
-          />
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Development Notes
+            </p>
+            {!composingNote && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs gap-1"
+                onClick={() => {
+                  setNoteText("");
+                  setComposingNote(true);
+                }}
+              >
+                <Plus className="h-3 w-3" />
+                Add Note
+              </Button>
+            )}
+          </div>
+
+          {/* Compose area */}
+          {composingNote && (
+            <div className="mb-3 rounded-md border border-primary/40 bg-muted/10 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {user && <InitialsAvatar initials={getInitials(user.name)} />}
+                <span className="font-medium">{user?.name ?? "You"}</span>
+                <span>·</span>
+                <span>
+                  {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+                <span className="ml-auto text-[10px] text-muted-foreground/60">
+                  ↑↓←→ move cursor · Enter for new line
+                </span>
+              </div>
+              <textarea
+                data-note-compose="true"
+                autoFocus
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    submitNote();
+                  }
+                  if (e.key === "Escape") {
+                    setComposingNote(false);
+                    setNoteText("");
+                  }
+                }}
+                placeholder="Type your note here…"
+                rows={3}
+                className="w-full rounded px-2 py-1.5 bg-background border border-border focus:border-primary focus:ring-1 focus:ring-ring focus:outline-none text-sm resize-none placeholder:text-muted-foreground/40 leading-relaxed"
+              />
+              <div className="flex items-center gap-2 justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => {
+                    setComposingNote(false);
+                    setNoteText("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  disabled={!noteText.trim()}
+                  onClick={submitNote}
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  Submit Note
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground/50">
+                ⌘↵ to submit · Esc to cancel
+              </p>
+            </div>
+          )}
+
+          {/* Notes feed */}
+          {form.developmentNotes ? (
+            <div className="rounded-md border border-border bg-muted/10 divide-y divide-border">
+              {parseNotes(form.developmentNotes).map((note, i) => (
+                <div key={i} className="flex items-start gap-2.5 px-3 py-2.5">
+                  <InitialsAvatar initials={note.initials} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5 mb-0.5">
+                      <span className="text-xs font-semibold">{note.initials}</span>
+                      {note.date && (
+                        <span className="text-[10px] text-muted-foreground">{note.date}</span>
+                      )}
+                    </div>
+                    <p className="text-sm leading-relaxed">{note.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            !composingNote && (
+              <p className="text-sm text-muted-foreground/60 italic">
+                No notes yet — click Add Note to get started.
+              </p>
+            )
+          )}
         </div>
 
         {/* Two-column info grid */}
