@@ -814,54 +814,45 @@ function ProjectDetail({
     <div className="flex flex-col overflow-hidden h-full">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 gap-4">
-        <div className="flex-1 min-w-0 space-y-0.5">
-          {/* Address — styled as heading input */}
+        {/* Project ID · Full Address · Type — single banner row */}
+        <div className="flex flex-1 min-w-0 items-center gap-1.5 text-sm">
+          <input
+            type="text"
+            value={form.projectNumber ?? ""}
+            onChange={(e) => setField("projectNumber", e.target.value || null)}
+            placeholder="#ID"
+            className="w-14 shrink-0 font-mono text-xs font-semibold text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+          />
+          <span className="text-muted-foreground/40 shrink-0">·</span>
           <input
             type="text"
             value={form.address}
             onChange={(e) => setField("address", e.target.value)}
             placeholder="Address"
-            className="w-full text-base font-bold bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="font-bold bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40 min-w-0 flex-1"
           />
-          {/* City / State / Project # row */}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <input
-              type="text"
-              value={form.city}
-              onChange={(e) => setField("city", e.target.value)}
-              placeholder="City"
-              className="w-28 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
-            />
-            <span>,</span>
-            <input
-              type="text"
-              value={form.state ?? ""}
-              onChange={(e) => setField("state", e.target.value || null)}
-              placeholder="ST"
-              className="w-10 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
-            />
-            {(form.projectNumber !== null || true) && (
-              <>
-                <span className="text-border">·</span>
-                <span>#</span>
-                <input
-                  type="text"
-                  value={form.projectNumber ?? ""}
-                  onChange={(e) => setField("projectNumber", e.target.value || null)}
-                  placeholder="—"
-                  className="w-16 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
-                />
-              </>
-            )}
-            <span className="text-border">·</span>
-            <input
-              type="text"
-              value={form.dealType ?? ""}
-              onChange={(e) => setField("dealType", e.target.value || null)}
-              placeholder="Deal type"
-              className="w-24 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
-            />
-          </div>
+          <input
+            type="text"
+            value={form.city}
+            onChange={(e) => setField("city", e.target.value)}
+            placeholder="City"
+            className="w-24 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+          />
+          <input
+            type="text"
+            value={form.state ?? ""}
+            onChange={(e) => setField("state", e.target.value || null)}
+            placeholder="ST"
+            className="w-8 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+          />
+          <span className="text-muted-foreground/40 shrink-0">·</span>
+          <input
+            type="text"
+            value={form.dealType ?? ""}
+            onChange={(e) => setField("dealType", e.target.value || null)}
+            placeholder="Type"
+            className="w-20 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+          />
         </div>
 
         {/* Save status + actions */}
