@@ -962,7 +962,7 @@ function ProjectDetail({
             style={{ display: "block" }}
             src={`https://maps.google.com/maps?q=${encodeURIComponent(
               [form.address, form.city, form.state].filter(Boolean).join(", ")
-            )}&output=embed&z=15&t=k`}
+            )}&output=embed&z=16&t=k`}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
           />
