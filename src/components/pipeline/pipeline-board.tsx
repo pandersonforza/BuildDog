@@ -851,7 +851,7 @@ function ProjectDetail({
             value={form.dealType ?? ""}
             onChange={(e) => setField("dealType", e.target.value || null)}
             placeholder="Type"
-            className="w-20 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+            className="w-28 shrink-0 text-muted-foreground bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
           />
         </div>
 
