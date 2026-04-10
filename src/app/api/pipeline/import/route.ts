@@ -4,11 +4,22 @@ import { getCurrentUser } from '@/lib/auth';
 
 export const maxDuration = 30;
 
+const FORZA_HARMAN_URL = 'https://docs.google.com/spreadsheets/d/1oWagUX8kMYu0fCgzavEW-RRPNKlRZUWsLZeFSTB2KNI/export?format=csv';
+
 const GROUP_SHEET_URLS: Record<string, string> = {
-  F7B:   'https://docs.google.com/spreadsheets/d/14ntOeldcbGSU4_vifWsBLH0mFD1PMTqT3S9Fvpg-96c/export?format=csv',
-  H7B:   'https://docs.google.com/spreadsheets/d/1AawR7WBYURTPIApFzLVicUbH8IM-47vQLUZkKuSOegw/export?format=csv',
-  Forza: 'https://docs.google.com/spreadsheets/d/1oWagUX8kMYu0fCgzavEW-RRPNKlRZUWsLZeFSTB2KNI/export?format=csv',
+  F7B:    'https://docs.google.com/spreadsheets/d/14ntOeldcbGSU4_vifWsBLH0mFD1PMTqT3S9Fvpg-96c/export?format=csv',
+  H7B:    'https://docs.google.com/spreadsheets/d/1AawR7WBYURTPIApFzLVicUbH8IM-47vQLUZkKuSOegw/export?format=csv',
+  Forza:  FORZA_HARMAN_URL,
+  Harman: FORZA_HARMAN_URL,
 };
+
+// Detect which group a row belongs to based on the "Project ID" column
+function detectRowGroup(raw: Record<string, string>): 'Forza' | 'Harman' | null {
+  const id = (raw['Project ID '] ?? raw['Project ID #'] ?? '').trim();
+  if (id.startsWith('FZD')) return 'Forza';
+  if (id === '(Harman)') return 'Harman';
+  return null;
+}
 
 // Standard CSV parser: handles quoted fields containing commas/newlines
 function parseCsv(text: string): Record<string, string>[] {
@@ -219,7 +230,11 @@ export async function POST(request: NextRequest) {
 
   const text = await res.text();
   const rawRows = parseCsv(text);
+
+  // For the shared Forza/Harman sheet, filter rows by detected group
+  const isSharedSheet = group === 'Forza' || group === 'Harman';
   const projects = rawRows
+    .filter((raw) => !isSharedSheet || detectRowGroup(raw) === group)
     .map(mapRow)
     .filter((p): p is PipelineProjectData => p !== null)
     .map((p) => ({ ...p, projectGroup: group }));
