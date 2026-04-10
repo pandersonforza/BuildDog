@@ -1039,14 +1039,6 @@ function ProjectDetail({
                     {s}
                   </span>
                 </div>
-                {/* Connector line between stages */}
-                {!isLast && (
-                  <div
-                    className={`h-px w-4 shrink-0 mt-[3px] ${
-                      isDone && !isCurrent ? "bg-green-400" : "bg-border"
-                    }`}
-                  />
-                )}
               </React.Fragment>
             );
           })}
