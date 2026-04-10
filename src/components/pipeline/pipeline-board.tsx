@@ -723,7 +723,7 @@ function ProjectDetail({
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Note compose state
-  const [composingNote, setComposingNote] = React.useState(false);
+  const [composingNote, setComposingNote] = React.useState(meetingMode);
   const [noteText, setNoteText] = React.useState("");
 
   const doSave = React.useCallback(
