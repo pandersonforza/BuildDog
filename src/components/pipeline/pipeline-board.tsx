@@ -1053,7 +1053,7 @@ function ProjectDetail({
 
           {/* Notes feed */}
           {form.developmentNotes ? (
-            <div className="rounded-md border border-border bg-muted/10 divide-y divide-border max-h-[200px] overflow-y-auto">
+            <div className="rounded-md border border-border bg-muted/10 divide-y divide-border max-h-[175px] overflow-y-auto">
               {parseNotes(form.developmentNotes).map((note, i) => (
                 <div key={i} className="group flex items-center gap-2 px-3 py-1.5 min-w-0">
                   <span className="shrink-0 text-xs font-semibold text-foreground">{note.initials}</span>
