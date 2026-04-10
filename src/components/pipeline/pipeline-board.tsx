@@ -855,19 +855,20 @@ function ProjectDetail({
 
   const submitNote = React.useCallback(() => {
     const text = noteText.trim();
-    if (!text) return;
-    const initials = user ? getInitials(user.name) : "?";
-    const line = formatNewNote(initials, text);
-    setFormState((prev) => {
-      const existing = prev.developmentNotes?.trim();
-      const updated = {
-        ...prev,
-        developmentNotes: existing ? `${line}\n${existing}` : line,
-      };
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      doSave(updated);
-      return updated;
-    });
+    if (text) {
+      const initials = user ? getInitials(user.name) : "?";
+      const line = formatNewNote(initials, text);
+      setFormState((prev) => {
+        const existing = prev.developmentNotes?.trim();
+        const updated = {
+          ...prev,
+          developmentNotes: existing ? `${line}\n${existing}` : line,
+        };
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        doSave(updated);
+        return updated;
+      });
+    }
     setNoteText("");
     setComposingNote(false);
   }, [noteText, user, doSave]);
