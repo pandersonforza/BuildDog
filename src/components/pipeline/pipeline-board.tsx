@@ -872,6 +872,28 @@ function ProjectDetail({
     setComposingNote(false);
   }, [noteText, user, doSave]);
 
+  // Meeting Mode: Enter opens/closes+saves note
+  React.useEffect(() => {
+    if (!meetingMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const tag = (document.activeElement as HTMLElement)?.tagName;
+      // If focused inside the note textarea, let the textarea's own onKeyDown handle it
+      if (tag === "TEXTAREA") return;
+      // Don't trigger inside other inputs/selects
+      if (tag === "INPUT" || tag === "SELECT") return;
+      e.preventDefault();
+      if (composingNote) {
+        submitNote();
+      } else {
+        setNoteText("");
+        setComposingNote(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [meetingMode, composingNote, submitNote]);
+
   const deleteNote = React.useCallback((rawLine: string) => {
     setFormState((prev) => {
       const lines = (prev.developmentNotes ?? "")
@@ -1074,7 +1096,7 @@ function ProjectDetail({
                   {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </span>
                 <span className="ml-auto text-[10px] text-muted-foreground/60">
-                  ↑↓←→ move cursor · Enter for new line
+                  {meetingMode ? "Enter to save · Shift+Enter for new line" : "↑↓←→ move cursor · Enter for new line"}
                 </span>
               </div>
               <textarea
@@ -1083,7 +1105,7 @@ function ProjectDetail({
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  if (e.key === "Enter" && (meetingMode ? (!e.shiftKey) : (e.metaKey || e.ctrlKey))) {
                     e.preventDefault();
                     submitNote();
                   }
@@ -1121,7 +1143,7 @@ function ProjectDetail({
                 </Button>
               </div>
               <p className="text-[10px] text-muted-foreground/50">
-                ⌘↵ to submit · Esc to cancel
+                {meetingMode ? "↵ to save · Esc to cancel" : "⌘↵ to submit · Esc to cancel"}
               </p>
             </div>
           )}
