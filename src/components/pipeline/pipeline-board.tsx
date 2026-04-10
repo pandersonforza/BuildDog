@@ -501,9 +501,9 @@ export function PipelineBoard() {
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;
   const selectedIdx = filteredProjects.findIndex((p) => p.id === selectedId);
 
-  // Keyboard navigation — all four arrow keys navigate projects,
-  // EXCEPT when the note-compose textarea is focused (so cursor moves freely there).
+  // Keyboard navigation — only active in Meeting Mode.
   React.useEffect(() => {
+    if (!meetingMode) return;
     const handler = (e: KeyboardEvent) => {
       if (dialogOpen) return;
       const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
@@ -527,7 +527,7 @@ export function PipelineBoard() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [dialogOpen, filteredProjects, selectedId]);
+  }, [dialogOpen, filteredProjects, selectedId, meetingMode]);
 
   // Delete
   const handleDelete = React.useCallback(
