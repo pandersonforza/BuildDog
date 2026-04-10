@@ -968,7 +968,7 @@ function ProjectDetail({
                         ? `${STAGE_DOT_COLORS[s]} border-transparent scale-125`
                         : isPast
                         ? "bg-green-400 border-transparent"
-                        : "bg-muted border-border"
+                        : "bg-transparent border-border"
                     }`}
                   />
                   <span
