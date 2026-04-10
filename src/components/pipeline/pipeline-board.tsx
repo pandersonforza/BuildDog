@@ -356,13 +356,18 @@ function InlineTextarea({
 // Subcomponents
 // ---------------------------------------------------------------------------
 
-function StageBadge({ stage }: { stage: StageName }) {
+function StatusBadge({ siteAcceptance }: { siteAcceptance: string | null }) {
+  const isActive = !!siteAcceptance;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${STAGE_COLORS[stage]}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
+        isActive
+          ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+          : "bg-gray-100 text-gray-600 border-gray-200"
+      }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${STAGE_DOT_COLORS[stage]}`} />
-      {stage}
+      <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+      {isActive ? "Active" : "Potential"}
     </span>
   );
 }
@@ -938,7 +943,7 @@ function ProjectDetail({
               <AlertCircle className="h-3 w-3" /> Error
             </span>
           )}
-          <StageBadge stage={stage} />
+          <StatusBadge siteAcceptance={form.siteAcceptance} />
           <Button
             variant="ghost"
             size="sm"
