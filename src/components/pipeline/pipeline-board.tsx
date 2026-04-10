@@ -462,37 +462,6 @@ export function PipelineBoard() {
     fetchProjects();
   }, [fetchProjects]);
 
-  // Keyboard navigation — all four arrow keys navigate projects,
-  // EXCEPT when the note-compose textarea is focused (so cursor moves freely there).
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (dialogOpen) return;
-      const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
-      if (!isArrow) return;
-
-      // Let arrow keys work normally inside the note compose textarea
-      const active = document.activeElement as HTMLElement | null;
-      if (active?.dataset?.noteCompose) return;
-
-      // Prevent cursor movement in any other focused input/textarea
-      e.preventDefault();
-      // Blur so the active field doesn't keep capturing subsequent events
-      active?.blur();
-
-      const idx = filteredProjects.findIndex((p) => p.id === selectedId);
-      if ((e.key === "ArrowUp" || e.key === "ArrowLeft") && idx > 0) {
-        setSelectedId(filteredProjects[idx - 1].id);
-      } else if (
-        (e.key === "ArrowDown" || e.key === "ArrowRight") &&
-        idx < filteredProjects.length - 1
-      ) {
-        setSelectedId(filteredProjects[idx + 1].id);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [dialogOpen, filteredProjects, selectedId]);
-
   const filteredProjects = React.useMemo(() => {
     let result = projects;
     if (groupFilter !== "All") {
@@ -510,6 +479,34 @@ export function PipelineBoard() {
 
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;
   const selectedIdx = filteredProjects.findIndex((p) => p.id === selectedId);
+
+  // Keyboard navigation — all four arrow keys navigate projects,
+  // EXCEPT when the note-compose textarea is focused (so cursor moves freely there).
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (dialogOpen) return;
+      const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
+      if (!isArrow) return;
+
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.dataset?.noteCompose) return;
+
+      e.preventDefault();
+      active?.blur();
+
+      const idx = filteredProjects.findIndex((p) => p.id === selectedId);
+      if ((e.key === "ArrowUp" || e.key === "ArrowLeft") && idx > 0) {
+        setSelectedId(filteredProjects[idx - 1].id);
+      } else if (
+        (e.key === "ArrowDown" || e.key === "ArrowRight") &&
+        idx < filteredProjects.length - 1
+      ) {
+        setSelectedId(filteredProjects[idx + 1].id);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [dialogOpen, filteredProjects, selectedId]);
 
   // Delete
   const handleDelete = React.useCallback(
