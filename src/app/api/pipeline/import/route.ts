@@ -7,6 +7,7 @@ export const maxDuration = 30;
 const GROUP_SHEET_URLS: Record<string, string> = {
   F7B:   'https://docs.google.com/spreadsheets/d/14ntOeldcbGSU4_vifWsBLH0mFD1PMTqT3S9Fvpg-96c/export?format=csv',
   H7B:   'https://docs.google.com/spreadsheets/d/1AawR7WBYURTPIApFzLVicUbH8IM-47vQLUZkKuSOegw/export?format=csv',
+  Forza: 'https://docs.google.com/spreadsheets/d/1oWagUX8kMYu0fCgzavEW-RRPNKlRZUWsLZeFSTB2KNI/export?format=csv',
 };
 
 // Standard CSV parser: handles quoted fields containing commas/newlines
