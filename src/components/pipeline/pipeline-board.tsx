@@ -409,10 +409,19 @@ export function PipelineBoard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keyboard navigation
+  // Keyboard navigation — all four arrow keys always navigate projects,
+  // regardless of what element is focused (including inputs/textareas).
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (dialogOpen) return;
+      const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
+      if (!isArrow) return;
+
+      // Prevent cursor movement in any focused input/textarea
+      e.preventDefault();
+      // Blur so the active field doesn't keep capturing subsequent events
+      (document.activeElement as HTMLElement | null)?.blur();
+
       const filtered = filteredProjects;
       const idx = filtered.findIndex((p) => p.id === selectedId);
       if ((e.key === "ArrowUp" || e.key === "ArrowLeft") && idx > 0) {
