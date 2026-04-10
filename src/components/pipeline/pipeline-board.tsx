@@ -639,11 +639,6 @@ export function PipelineBoard() {
                     {project.city}
                     {project.state ? `, ${project.state}` : ""}
                   </p>
-                  {snippet && (
-                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
-                      {snippet}
-                    </p>
-                  )}
                 </button>
               );
             })
