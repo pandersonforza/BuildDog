@@ -1,10 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Plus, ChevronLeft, ChevronRight, Search, Pencil, Trash2, ChevronDown } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Trash2,
+  ChevronDown,
+  Check,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { PipelineDialog } from "./pipeline-dialog";
 
@@ -131,7 +140,6 @@ const STAGE_DOT_COLORS: Record<StageName, string> = {
   Open: "bg-green-500",
 };
 
-// Progress strip stages in order
 const PROGRESS_STAGES: StageName[] = [
   "Prospect",
   "Site Accepted",
@@ -145,37 +153,6 @@ const PROGRESS_STAGES: StageName[] = [
   "Construction",
   "Open",
 ];
-
-// ---------------------------------------------------------------------------
-// Note parsing
-// ---------------------------------------------------------------------------
-
-interface ParsedNote {
-  initials: string;
-  rest: string;
-  raw: string;
-}
-
-function parseNotes(text: string): ParsedNote[] {
-  // Format: INITIALS-M-D- note text
-  // e.g. "JD-3-15- Submitted plans" or "AB-12-1- Called landlord"
-  const lines = text.split("\n").filter((l) => l.trim());
-  const parsed: ParsedNote[] = [];
-
-  for (const line of lines) {
-    const match = line.match(/^([A-Z]{1,4})-(\d{1,2})-(\d{1,2})-\s*(.*)$/);
-    if (match) {
-      parsed.push({
-        initials: match[1],
-        rest: `${match[2]}/${match[3]} — ${match[4]}`,
-        raw: line,
-      });
-    } else {
-      parsed.push({ initials: "•", rest: line, raw: line });
-    }
-  }
-  return parsed;
-}
 
 // ---------------------------------------------------------------------------
 // Checklist sections
@@ -282,6 +259,54 @@ function isChecked(value: string | null): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Inline edit components
+// ---------------------------------------------------------------------------
+
+function InlineInput({
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+      placeholder={placeholder}
+      className={`w-full rounded px-1.5 py-0.5 bg-transparent hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-sm placeholder:text-muted-foreground/40 ${className}`}
+    />
+  );
+}
+
+function InlineTextarea({
+  value,
+  onChange,
+  placeholder,
+  rows = 4,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <textarea
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+      placeholder={placeholder}
+      rows={rows}
+      className="w-full rounded-md px-2.5 py-2 bg-muted/10 border border-border/50 hover:border-border focus:border-primary focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-sm resize-none placeholder:text-muted-foreground/40 leading-relaxed"
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Subcomponents
 // ---------------------------------------------------------------------------
 
@@ -292,26 +317,6 @@ function StageBadge({ stage }: { stage: StageName }) {
     >
       <span className={`h-1.5 w-1.5 rounded-full ${STAGE_DOT_COLORS[stage]}`} />
       {stage}
-    </span>
-  );
-}
-
-function InitialsAvatar({ initials }: { initials: string }) {
-  const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-green-500",
-    "bg-amber-500",
-    "bg-rose-500",
-    "bg-cyan-500",
-    "bg-indigo-500",
-  ];
-  const idx = initials.charCodeAt(0) % colors.length;
-  return (
-    <span
-      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${colors[idx]}`}
-    >
-      {initials.slice(0, 2)}
     </span>
   );
 }
@@ -354,25 +359,30 @@ export function PipelineBoard() {
   const [search, setSearch] = React.useState("");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editingProject, setEditingProject] = React.useState<PipelineProject | null>(null);
   const [importing, setImporting] = React.useState(false);
 
   const handleImportFromSheet = async () => {
     setImporting(true);
     try {
       const res = await fetch("/api/pipeline/import", { method: "POST" });
-      const data = await res.json() as { imported?: number; error?: string };
+      const data = (await res.json()) as { imported?: number; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Import failed");
-      toast({ title: "Imported!", description: `${data.imported} projects imported from Google Sheet` });
+      toast({
+        title: "Imported!",
+        description: `${data.imported} projects imported from Google Sheet`,
+      });
       fetchProjects();
     } catch (err) {
-      toast({ title: "Import failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+      toast({
+        title: "Import failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
       setImporting(false);
     }
   };
 
-  // Fetch
   const fetchProjects = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -384,7 +394,11 @@ export function PipelineBoard() {
         setSelectedId(data[0].id);
       }
     } catch {
-      toast({ title: "Error", description: "Failed to load pipeline projects", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load pipeline projects",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -401,13 +415,12 @@ export function PipelineBoard() {
       if (dialogOpen) return;
       const filtered = filteredProjects;
       const idx = filtered.findIndex((p) => p.id === selectedId);
-      if (e.key === "ArrowUp" && idx > 0) {
+      if ((e.key === "ArrowUp" || e.key === "ArrowLeft") && idx > 0) {
         setSelectedId(filtered[idx - 1].id);
-      } else if (e.key === "ArrowDown" && idx < filtered.length - 1) {
-        setSelectedId(filtered[idx + 1].id);
-      } else if (e.key === "ArrowLeft" && idx > 0) {
-        setSelectedId(filtered[idx - 1].id);
-      } else if (e.key === "ArrowRight" && idx < filtered.length - 1) {
+      } else if (
+        (e.key === "ArrowDown" || e.key === "ArrowRight") &&
+        idx < filtered.length - 1
+      ) {
         setSelectedId(filtered[idx + 1].id);
       }
     };
@@ -430,44 +443,52 @@ export function PipelineBoard() {
   const selectedIdx = filteredProjects.findIndex((p) => p.id === selectedId);
 
   // Delete
-  const handleDelete = React.useCallback(async (id: string) => {
-    if (!confirm("Delete this pipeline project?")) return;
-    try {
-      const res = await fetch(`/api/pipeline/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
-      toast({ title: "Deleted", description: "Project removed from pipeline" });
-      setSelectedId(null);
-      fetchProjects();
-    } catch {
-      toast({ title: "Error", description: "Failed to delete project", variant: "destructive" });
-    }
-  }, [fetchProjects, toast]);
+  const handleDelete = React.useCallback(
+    async (id: string) => {
+      if (!confirm("Delete this pipeline project?")) return;
+      try {
+        const res = await fetch(`/api/pipeline/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete");
+        toast({ title: "Deleted", description: "Project removed from pipeline" });
+        setSelectedId(null);
+        fetchProjects();
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to delete project",
+          variant: "destructive",
+        });
+      }
+    },
+    [fetchProjects, toast]
+  );
 
-  // Save (create or update)
-  const handleSave = React.useCallback(async (data: Partial<PipelineProject>) => {
-    try {
-      const isEdit = !!editingProject;
-      const url = isEdit ? `/api/pipeline/${editingProject!.id}` : "/api/pipeline";
-      const method = isEdit ? "PATCH" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      const saved = await res.json();
-      toast({
-        title: isEdit ? "Updated" : "Created",
-        description: `${saved.address} ${isEdit ? "updated" : "added"} to pipeline`,
-      });
-      setEditingProject(null);
-      setDialogOpen(false);
-      await fetchProjects();
-      setSelectedId(saved.id);
-    } catch {
-      toast({ title: "Error", description: "Failed to save project", variant: "destructive" });
-    }
-  }, [editingProject, fetchProjects, toast]);
+  // Create new project (dialog only)
+  const handleCreate = React.useCallback(
+    async (data: Partial<PipelineProject>) => {
+      try {
+        const res = await fetch("/api/pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to create");
+        const saved = await res.json();
+        toast({ title: "Created", description: `${saved.address} added to pipeline` });
+        setDialogOpen(false);
+        await fetchProjects();
+        setSelectedId(saved.id);
+      } catch {
+        toast({ title: "Error", description: "Failed to create project", variant: "destructive" });
+      }
+    },
+    [fetchProjects, toast]
+  );
+
+  // Called by ProjectDetail when it auto-saves a field
+  const handleProjectUpdated = React.useCallback((updated: PipelineProject) => {
+    setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  }, []);
 
   if (isLoading) {
     return (
@@ -492,10 +513,7 @@ export function PipelineBoard() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => {
-              setEditingProject(null);
-              setDialogOpen(true);
-            }}
+            onClick={() => setDialogOpen(true)}
             className="h-7 w-7 p-0"
           >
             <Plus className="h-4 w-4" />
@@ -522,7 +540,12 @@ export function PipelineBoard() {
             <div className="p-4 text-center text-sm text-muted-foreground space-y-3">
               <p>{search ? "No matches found" : "No projects yet"}</p>
               {!search && (
-                <Button size="sm" variant="outline" onClick={handleImportFromSheet} disabled={importing}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleImportFromSheet}
+                  disabled={importing}
+                >
                   {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                   Import from Google Sheet
                 </Button>
@@ -532,7 +555,8 @@ export function PipelineBoard() {
             filteredProjects.map((project) => {
               const stage = getStage(project);
               const snippet = project.developmentNotes
-                ? project.developmentNotes.slice(0, 60) + (project.developmentNotes.length > 60 ? "…" : "")
+                ? project.developmentNotes.slice(0, 60) +
+                  (project.developmentNotes.length > 60 ? "…" : "")
                 : null;
               const isSelected = project.id === selectedId;
               return (
@@ -541,9 +565,7 @@ export function PipelineBoard() {
                   type="button"
                   onClick={() => setSelectedId(project.id)}
                   className={`w-full border-b border-border px-4 py-3 text-left transition-colors ${
-                    isSelected
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-muted/50"
+                    isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted/50"
                   }`}
                 >
                   <div className="mb-1 flex items-start justify-between gap-2">
@@ -551,7 +573,8 @@ export function PipelineBoard() {
                     <StageBadge stage={stage} />
                   </div>
                   <p className="mb-1 text-xs text-muted-foreground">
-                    {project.city}{project.state ? `, ${project.state}` : ""}
+                    {project.city}
+                    {project.state ? `, ${project.state}` : ""}
                   </p>
                   {snippet && (
                     <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
@@ -569,28 +592,24 @@ export function PipelineBoard() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {selectedProject ? (
           <ProjectDetail
+            key={selectedProject.id}
             project={selectedProject}
             idx={selectedIdx}
             total={filteredProjects.length}
-            onPrev={() => selectedIdx > 0 && setSelectedId(filteredProjects[selectedIdx - 1].id)}
-            onNext={() => selectedIdx < filteredProjects.length - 1 && setSelectedId(filteredProjects[selectedIdx + 1].id)}
-            onEdit={() => {
-              setEditingProject(selectedProject);
-              setDialogOpen(true);
-            }}
+            onPrev={() =>
+              selectedIdx > 0 && setSelectedId(filteredProjects[selectedIdx - 1].id)
+            }
+            onNext={() =>
+              selectedIdx < filteredProjects.length - 1 &&
+              setSelectedId(filteredProjects[selectedIdx + 1].id)
+            }
             onDelete={() => handleDelete(selectedProject.id)}
+            onUpdated={handleProjectUpdated}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
             <p className="text-sm">Select a project from the list</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditingProject(null);
-                setDialogOpen(true);
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" />
               Add First Project
             </Button>
@@ -598,23 +617,22 @@ export function PipelineBoard() {
         )}
       </div>
 
-      {/* Dialog */}
+      {/* Dialog — create only */}
       <PipelineDialog
         open={dialogOpen}
-        onOpenChange={(o) => {
-          setDialogOpen(o);
-          if (!o) setEditingProject(null);
-        }}
-        project={editingProject}
-        onSave={handleSave}
+        onOpenChange={setDialogOpen}
+        project={null}
+        onSave={handleCreate}
       />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Project detail view
+// Project detail — fully inline editable
 // ---------------------------------------------------------------------------
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 function ProjectDetail({
   project,
@@ -622,44 +640,145 @@ function ProjectDetail({
   total,
   onPrev,
   onNext,
-  onEdit,
   onDelete,
+  onUpdated,
 }: {
   project: PipelineProject;
   idx: number;
   total: number;
   onPrev: () => void;
   onNext: () => void;
-  onEdit: () => void;
   onDelete: () => void;
+  onUpdated: (project: PipelineProject) => void;
 }) {
-  const stage = getStage(project);
+  const { toast } = useToast();
+  const [form, setFormState] = React.useState<PipelineProject>(project);
+  const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle");
+  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const doSave = React.useCallback(
+    async (data: PipelineProject) => {
+      setSaveStatus("saving");
+      try {
+        const res = await fetch(`/api/pipeline/${data.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        const saved = await res.json();
+        onUpdated(saved);
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 2000);
+      } catch {
+        setSaveStatus("error");
+        toast({ title: "Save failed", description: "Changes could not be saved", variant: "destructive" });
+      }
+    },
+    [onUpdated, toast]
+  );
+
+  const setField = React.useCallback(
+    (key: keyof PipelineProject, value: string | null) => {
+      setFormState((prev) => {
+        const updated = { ...prev, [key]: value };
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => doSave(updated), 800);
+        return updated;
+      });
+    },
+    [doSave]
+  );
+
+  const toggleCheck = React.useCallback(
+    (key: keyof PipelineProject) => {
+      setFormState((prev) => {
+        const current = prev[key] as string | null;
+        const wasChecked = isChecked(current);
+        const updated = { ...prev, [key]: wasChecked ? null : "TRUE" };
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        doSave(updated);
+        return updated;
+      });
+    },
+    [doSave]
+  );
+
+  const stage = getStage(form);
   const stageIdx = PROGRESS_STAGES.indexOf(stage);
-  const notes = project.developmentNotes ? parseNotes(project.developmentNotes) : [];
 
   return (
     <div className="flex flex-col overflow-hidden h-full">
-      {/* Header bar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-bold">{project.address}</h1>
-            <p className="text-xs text-muted-foreground">
-              {project.city}{project.state ? `, ${project.state}` : ""}
-              {project.projectNumber ? ` · #${project.projectNumber}` : ""}
-            </p>
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 gap-4">
+        <div className="flex-1 min-w-0 space-y-0.5">
+          {/* Address — styled as heading input */}
+          <input
+            type="text"
+            value={form.address}
+            onChange={(e) => setField("address", e.target.value)}
+            placeholder="Address"
+            className="w-full text-base font-bold bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/40"
+          />
+          {/* City / State / Project # row */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <input
+              type="text"
+              value={form.city}
+              onChange={(e) => setField("city", e.target.value)}
+              placeholder="City"
+              className="w-28 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
+            />
+            <span>,</span>
+            <input
+              type="text"
+              value={form.state ?? ""}
+              onChange={(e) => setField("state", e.target.value || null)}
+              placeholder="ST"
+              className="w-10 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
+            />
+            {(form.projectNumber !== null || true) && (
+              <>
+                <span className="text-border">·</span>
+                <span>#</span>
+                <input
+                  type="text"
+                  value={form.projectNumber ?? ""}
+                  onChange={(e) => setField("projectNumber", e.target.value || null)}
+                  placeholder="—"
+                  className="w-16 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
+                />
+              </>
+            )}
+            <span className="text-border">·</span>
+            <input
+              type="text"
+              value={form.dealType ?? ""}
+              onChange={(e) => setField("dealType", e.target.value || null)}
+              placeholder="Deal type"
+              className="w-24 bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors text-xs placeholder:text-muted-foreground/40"
+            />
           </div>
-          {project.dealType && (
-            <Badge variant="outline" className="shrink-0 text-xs">
-              {project.dealType}
-            </Badge>
-          )}
         </div>
+
+        {/* Save status + actions */}
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit} className="h-8 gap-1.5 text-xs">
-            <Pencil className="h-3 w-3" />
-            Edit
-          </Button>
+          {saveStatus === "saving" && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <Check className="h-3 w-3" /> Saved
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <span className="flex items-center gap-1 text-xs text-destructive">
+              <AlertCircle className="h-3 w-3" /> Error
+            </span>
+          )}
+          <StageBadge stage={stage} />
           <Button
             variant="ghost"
             size="sm"
@@ -678,7 +797,6 @@ function ProjectDetail({
               className="h-8 w-8 p-0"
             >
               <ChevronLeft className="h-4 w-4" />
-              <span className="sr-only">Previous</span>
             </Button>
             <span className="text-xs text-muted-foreground w-12 text-center">
               {idx + 1} / {total}
@@ -691,7 +809,6 @@ function ProjectDetail({
               className="h-8 w-8 p-0"
             >
               <ChevronRight className="h-4 w-4" />
-              <span className="sr-only">Next</span>
             </Button>
           </div>
         </div>
@@ -744,46 +861,47 @@ function ProjectDetail({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
         {/* Development Notes */}
-        {notes.length > 0 && (
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Development Notes
-            </h3>
-            <div className="rounded-md border border-border bg-muted/20 p-4 space-y-2">
-              {notes.map((note, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <InitialsAvatar initials={note.initials} />
-                  <p className="text-sm leading-relaxed flex-1">{note.rest}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Development Notes
+          </p>
+          <p className="mb-1 text-[10px] text-muted-foreground/70">
+            Format: <code className="bg-muted px-0.5 rounded">INITIALS-M-D- Note text</code>
+          </p>
+          <InlineTextarea
+            value={form.developmentNotes}
+            onChange={(v) => setField("developmentNotes", v)}
+            placeholder="e.g. JD-4-10- Submitted plans to city…"
+            rows={5}
+          />
+        </div>
 
         {/* Two-column info grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Left: process notes */}
           <div className="space-y-3">
-            {project.planningApprovalProcess && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                  Planning Approval Process
-                </p>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap rounded-md border border-border bg-muted/10 p-3">
-                  {project.planningApprovalProcess}
-                </p>
-              </div>
-            )}
-            {project.buildingApprovalProcess && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                  Building Approval Process
-                </p>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap rounded-md border border-border bg-muted/10 p-3">
-                  {project.buildingApprovalProcess}
-                </p>
-              </div>
-            )}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Planning Approval Process
+              </p>
+              <InlineTextarea
+                value={form.planningApprovalProcess}
+                onChange={(v) => setField("planningApprovalProcess", v)}
+                placeholder="Describe planning process…"
+                rows={3}
+              />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Building Approval Process
+              </p>
+              <InlineTextarea
+                value={form.buildingApprovalProcess}
+                onChange={(v) => setField("buildingApprovalProcess", v)}
+                placeholder="Describe building process…"
+                rows={3}
+              />
+            </div>
           </div>
 
           {/* Right: key dates */}
@@ -791,30 +909,64 @@ function ProjectDetail({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
               Key Dates
             </p>
-            <div className="space-y-1.5">
-              <KeyDate label="Site Acceptance" value={project.siteAcceptance} />
-              <KeyDate label="LOI Executed" value={project.loiExecuted} />
-              <KeyDate label="Lease Executed" value={project.leaseExecuted} />
-              <KeyDate label="Construction Start" value={project.constructionStart} />
-              <KeyDate label="Open Date" value={project.openDate} />
-              <KeyDate label="Rent Commencement" value={project.rentCommencementDate} />
+            <div className="space-y-1">
+              <KeyDateField
+                label="Site Acceptance"
+                value={form.siteAcceptance}
+                onChange={(v) => setField("siteAcceptance", v)}
+              />
+              <KeyDateField
+                label="LOI Executed"
+                value={form.loiExecuted}
+                onChange={(v) => setField("loiExecuted", v)}
+              />
+              <KeyDateField
+                label="Lease Executed"
+                value={form.leaseExecuted}
+                onChange={(v) => setField("leaseExecuted", v)}
+              />
+              <KeyDateField
+                label="Construction Start"
+                value={form.constructionStart}
+                onChange={(v) => setField("constructionStart", v)}
+              />
+              <KeyDateField
+                label="Open Date"
+                value={form.openDate}
+                onChange={(v) => setField("openDate", v)}
+              />
+              <KeyDateField
+                label="Rent Commencement"
+                value={form.rentCommencementDate}
+                onChange={(v) => setField("rentCommencementDate", v)}
+              />
             </div>
           </div>
         </div>
 
         {/* Teams */}
-        {(project.civilPermittingTeam || project.architectTeam || project.generalContractor) && (
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              Teams
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <TeamChip label="Civil / Permitting" value={project.civilPermittingTeam} />
-              <TeamChip label="Architect" value={project.architectTeam} />
-              <TeamChip label="General Contractor" value={project.generalContractor} />
-            </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Teams
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <TeamField
+              label="Civil / Permitting"
+              value={form.civilPermittingTeam}
+              onChange={(v) => setField("civilPermittingTeam", v)}
+            />
+            <TeamField
+              label="Architect"
+              value={form.architectTeam}
+              onChange={(v) => setField("architectTeam", v)}
+            />
+            <TeamField
+              label="General Contractor"
+              value={form.generalContractor}
+              onChange={(v) => setField("generalContractor", v)}
+            />
           </div>
-        )}
+        </div>
 
         {/* Stage checklists */}
         <div>
@@ -825,21 +977,38 @@ function ProjectDetail({
             {CHECKLIST_SECTIONS.map((section) => (
               <CollapsibleSection key={section.label} title={section.label}>
                 {section.fields.map((field) => {
-                  const val = project[field.key] as string | null;
+                  const val = form[field.key] as string | null;
                   const checked = isChecked(val);
+                  const hasTextValue =
+                    val &&
+                    val.toUpperCase() !== "TRUE" &&
+                    val.toUpperCase() !== "FALSE";
                   return (
-                    <div key={field.key} className="flex items-center justify-between py-0.5">
-                      <span className="flex items-center gap-2 text-sm">
-                        <span className="text-base">{checked ? "✅" : "⬜"}</span>
-                        <span className={checked ? "text-foreground" : "text-muted-foreground"}>
-                          {field.label}
-                        </span>
+                    <div key={field.key} className="flex items-center gap-2 py-0.5">
+                      {/* Toggle checkbox */}
+                      <button
+                        type="button"
+                        onClick={() => toggleCheck(field.key)}
+                        className="shrink-0 text-base leading-none hover:scale-110 transition-transform"
+                        title={checked ? "Mark incomplete" : "Mark complete"}
+                      >
+                        {checked ? "✅" : "⬜"}
+                      </button>
+                      <span
+                        className={`text-sm shrink-0 ${
+                          checked ? "text-foreground" : "text-muted-foreground"
+                        }`}
+                      >
+                        {field.label}
                       </span>
-                      {val && val.toUpperCase() !== "TRUE" && val.toUpperCase() !== "FALSE" && (
-                        <span className="text-xs text-muted-foreground ml-2 truncate max-w-[140px]">
-                          {val}
-                        </span>
-                      )}
+                      {/* Inline value input */}
+                      <input
+                        type="text"
+                        value={hasTextValue ? val! : ""}
+                        onChange={(e) => setField(field.key, e.target.value || (checked ? "TRUE" : null))}
+                        placeholder="date or note"
+                        className="flex-1 min-w-0 text-xs bg-transparent rounded px-1 py-0.5 hover:bg-muted/60 focus:bg-background focus:ring-1 focus:ring-ring focus:outline-none transition-colors placeholder:text-muted-foreground/30 text-right"
+                      />
                     </div>
                   );
                 })}
@@ -852,24 +1021,52 @@ function ProjectDetail({
   );
 }
 
-function KeyDate({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
+// ---------------------------------------------------------------------------
+// Inline field subcomponents
+// ---------------------------------------------------------------------------
+
+function KeyDateField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
   return (
-    <div className="flex items-baseline justify-between text-sm gap-2">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="font-medium text-right">{value}</span>
+    <div className="flex items-center justify-between gap-2 text-sm">
+      <span className="text-muted-foreground shrink-0 text-xs">{label}</span>
+      <InlineInput
+        value={value}
+        onChange={onChange}
+        placeholder="—"
+        className="text-right text-xs max-w-[130px]"
+      />
     </div>
   );
 }
 
-function TeamChip({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
+function TeamField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
   return (
-    <div className="rounded-md border border-border bg-muted/20 p-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-md border border-border bg-muted/10 hover:bg-muted/20 transition-colors p-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
         {label}
       </p>
-      <p className="mt-0.5 text-sm font-medium">{value}</p>
+      <InlineInput
+        value={value}
+        onChange={onChange}
+        placeholder="—"
+        className="font-medium text-sm px-0"
+      />
     </div>
   );
 }

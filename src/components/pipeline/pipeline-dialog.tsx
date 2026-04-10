@@ -121,9 +121,7 @@ export function PipelineDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {project ? "Edit Pipeline Project" : "Add Pipeline Project"}
-          </DialogTitle>
+          <DialogTitle>Add Pipeline Project</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
