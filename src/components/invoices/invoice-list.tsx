@@ -263,7 +263,7 @@ export function InvoiceList({
                 href={getInvoicePdfUrl(row.original.filePath)!}
                 target="_blank"
                 rel="noopener noreferrer"
-                download
+                download={`${row.original.vendorName ?? "Invoice"}${row.original.invoiceNumber ? ` - ${row.original.invoiceNumber}` : ""}.pdf`}
                 title="Open / download PDF"
                 className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               >
