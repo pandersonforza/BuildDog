@@ -20,12 +20,19 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import { Plus, ExternalLink, Trash2, DollarSign, FileText, SlidersHorizontal, X } from "lucide-react";
+import { Plus, ExternalLink, Trash2, DollarSign, FileText, FileDown, SlidersHorizontal, X } from "lucide-react";
 import { SelectNative } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { InvoiceApprovalDialog } from "@/components/invoices/invoice-approval-dialog";
 import { PROJECT_GROUPS } from "@/lib/constants";
 import type { InvoiceWithRelations } from "@/types";
+
+function getInvoicePdfUrl(filePath: string | null | undefined): string | null {
+  if (!filePath) return null;
+  return filePath.startsWith("http")
+    ? `/api/invoices/file?url=${encodeURIComponent(filePath)}`
+    : filePath;
+}
 
 interface InvoiceListProps {
   invoices: InvoiceWithRelations[];
@@ -251,6 +258,18 @@ export function InvoiceList({
             >
               <FileText className="h-4 w-4" />
             </Button>
+            {getInvoicePdfUrl(row.original.filePath) && (
+              <Button variant="ghost" size="icon" asChild title="Open / download PDF">
+                <a
+                  href={getInvoicePdfUrl(row.original.filePath)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                >
+                  <FileDown className="h-4 w-4" />
+                </a>
+              </Button>
+            )}
             {canEdit && status === "Pending Review" && (
               <>
                 <Button
@@ -473,11 +492,7 @@ export function InvoiceList({
           if (match) { try { payItems = JSON.parse(match[1]); } catch { /* empty */ } }
           const isPayApp = payItems.length > 0;
 
-          const pdfUrl = viewingInvoice.filePath
-            ? viewingInvoice.filePath.startsWith("http")
-              ? `/api/invoices/file?url=${encodeURIComponent(viewingInvoice.filePath)}`
-              : viewingInvoice.filePath
-            : null;
+          const pdfUrl = getInvoicePdfUrl(viewingInvoice.filePath);
 
           return (
             <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
