@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, CloudUpload } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 const GROUPS = ["F7B", "H7B", "Forza", "Harman"] as const;
 type Group = (typeof GROUPS)[number];
@@ -171,7 +171,6 @@ function GroupTab({ group }: { group: Group }) {
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [rows, setRows] = React.useState<string[][]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [syncing, setSyncing] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -224,22 +223,6 @@ function GroupTab({ group }: { group: Group }) {
     [save]
   );
 
-  const syncFromSheet = async () => {
-    setSyncing(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/pipeline-report?group=${group}`, { method: "POST" });
-      const d = await res.json();
-      if (d.error) throw new Error(d.error);
-      setHeaders(d.headers);
-      setRows(d.rows);
-      setSaveStatus("idle");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -281,19 +264,6 @@ function GroupTab({ group }: { group: Group }) {
             <span className="text-xs text-destructive">Save failed</span>
           )}
         </div>
-        <button
-          onClick={syncFromSheet}
-          disabled={syncing}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-          title="Overwrite with latest data from Google Sheets"
-        >
-          {syncing ? (
-            <RefreshCw className="h-3 w-3 animate-spin" />
-          ) : (
-            <CloudUpload className="h-3 w-3" />
-          )}
-          Sync from Google Sheets
-        </button>
       </div>
 
       {/* Table */}

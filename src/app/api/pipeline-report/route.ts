@@ -112,20 +112,3 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// POST — re-sync from Google Sheets, overwriting saved data
-export async function POST(req: NextRequest) {
-  const group = req.nextUrl.searchParams.get("group") ?? "F7B";
-  if (!SHEET_URLS[group]) return NextResponse.json({ error: "Unknown group" }, { status: 400 });
-
-  try {
-    const { headers, rows } = await fetchFromSheet(group);
-    await prisma.pipelineSheet.upsert({
-      where: { group },
-      update: { headers, rows, syncedAt: new Date() },
-      create: { group, headers, rows, syncedAt: new Date() },
-    });
-    return NextResponse.json({ headers, rows });
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
-  }
-}
