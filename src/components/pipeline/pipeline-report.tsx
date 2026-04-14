@@ -144,7 +144,7 @@ function SpreadsheetTable({
                         />
                       ) : (
                         <div className="px-2 h-full cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
-                          <span className="whitespace-nowrap">{row[ci] ?? ""}</span>
+                          <span className="whitespace-pre-wrap">{row[ci] ?? ""}</span>
                         </div>
                       )}
                     </td>
