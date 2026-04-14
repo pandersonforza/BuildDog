@@ -98,14 +98,14 @@ function SpreadsheetTable({
   }
 
   return (
-    <div className="overflow-auto h-full">
-      <table className="border-collapse text-[11px] min-w-max">
+    <div className="overflow-y-auto h-full">
+      <table className="border-collapse text-[11px] w-full table-fixed">
         <thead>
           <tr>
             {headers.map((h, i) => (
               <th
                 key={i}
-                className={`sticky top-0 border border-border bg-muted px-2 py-1.5 text-left font-semibold text-muted-foreground whitespace-nowrap select-none ${
+                className={`sticky top-0 border border-border bg-muted px-2 py-1.5 text-left font-semibold text-muted-foreground truncate select-none ${
                   i === 0 ? "left-0 z-20" : "z-10"
                 }`}
               >
@@ -139,13 +139,13 @@ function SpreadsheetTable({
                           onChange={(e) => setDraft(e.target.value)}
                           onKeyDown={(e) => handleKeyDown(e, ri, ci)}
                           onBlur={() => commitEdit(ri, ci, draft)}
-                          className="block w-full h-full min-w-[120px] bg-blue-50 dark:bg-blue-950/30 outline-none text-[11px] px-2 resize-none overflow-y-auto leading-relaxed"
+                          className="block w-full h-full bg-blue-50 dark:bg-blue-950/30 outline-none text-[11px] px-2 resize-none overflow-y-auto leading-relaxed"
                           style={{ lineHeight: "23px" }}
                           rows={1}
                         />
                       ) : (
-                        <div className="px-2 h-full min-w-[60px] max-w-[320px] cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
-                          <span className="whitespace-nowrap">{row[ci] ?? ""}</span>
+                        <div className="px-2 h-full w-full cursor-default overflow-y-auto flex items-center hover:bg-accent/30">
+                          <span className="truncate w-full">{row[ci] ?? ""}</span>
                         </div>
                       )}
                     </td>
