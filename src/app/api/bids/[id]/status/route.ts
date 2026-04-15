@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const VALID_STATUSES = ["Submitted", "Under Review", "Accepted", "Rejected"];
@@ -76,8 +77,7 @@ async function addBidToBudget(
   }
 
   // Now process all line items with minimal queries using a transaction
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const operations: any[] = [];
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
 
   for (const [categoryName, items] of byCategory) {
     const category = categoryMap.get(categoryName)!;

@@ -21,8 +21,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON request body" }, { status: 400 });
   }
 
-  console.log("[payapp/parse] PDF base64 length:", pdf.length);
-
   const client = new Anthropic({ apiKey });
 
   try {
@@ -63,8 +61,6 @@ If no Schedule of Values is found, return {"items":[]}.`,
       .map((b) => (b as { type: "text"; text: string }).text)
       .join("");
 
-    console.log("[payapp/parse] Claude response:", rawText.slice(0, 300));
-
     const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
 
     let parsed: { items?: Array<{ description: string; amount: number }> };
@@ -80,7 +76,6 @@ If no Schedule of Values is found, return {"items":[]}.`,
       .map((i) => ({ description: i.description.trim(), amount: Math.round(i.amount * 100) / 100 }))
       .filter((i) => i.amount > 0);
 
-    console.log("[payapp/parse] Returning", items.length, "items");
     return NextResponse.json({ items });
 
   } catch (err) {
