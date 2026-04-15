@@ -94,7 +94,7 @@ export default function BudgetPage() {
         )}
       </div>
       {summary && (
-        <BudgetOverview summary={summary} />
+        <BudgetOverview summary={summary} categories={categories} />
       )}
       <BudgetTable projectId={projectId} categories={categories} onMutate={fetchData} />
       <BudgetImport
