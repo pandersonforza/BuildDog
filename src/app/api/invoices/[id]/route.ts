@@ -170,7 +170,7 @@ export async function PUT(
               try {
                 const payAppItems: { lineItemId: string; amount: number }[] = JSON.parse(match[1]);
                 for (const item of payAppItems) {
-                  if (item.lineItemId && item.amount > 0) {
+                  if (item.lineItemId && item.amount !== 0) {
                     await tx.budgetLineItem.update({
                       where: { id: item.lineItemId },
                       data: { actualCost: { increment: item.amount } },
@@ -280,9 +280,9 @@ export async function PUT(
     }
 
     if (body.amount !== undefined) {
-      if (typeof body.amount !== 'number' || isNaN(body.amount) || body.amount < 0) {
+      if (typeof body.amount !== 'number' || isNaN(body.amount)) {
         return NextResponse.json(
-          { error: 'Amount must be a valid non-negative number' },
+          { error: 'Amount must be a valid number' },
           { status: 400 }
         );
       }

@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof amount !== 'number' || isNaN(amount) || amount < 0) {
+    if (typeof amount !== 'number' || isNaN(amount)) {
       return NextResponse.json(
-        { error: 'Amount must be a valid non-negative number' },
+        { error: 'Amount must be a valid number' },
         { status: 400 }
       );
     }

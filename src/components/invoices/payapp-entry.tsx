@@ -134,7 +134,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
           );
           const amount = parseFloat(amountRaw.replace(/[$,\s]/g, "")) || 0;
           if (descRaw) excelDescs.push(descRaw);
-          if (amount > 0) rowsWithAmount++;
+          if (amount !== 0) rowsWithAmount++;
         }
 
         let matched = 0;
@@ -661,7 +661,6 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                                 <Input
                                   type="number"
                                   step="0.01"
-                                  min="0"
                                   className="w-32 text-right h-7 text-sm"
                                   value={item.currentAmount || ""}
                                   onChange={(e) => updateAmount(idx, parseFloat(e.target.value) || 0)}

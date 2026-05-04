@@ -171,13 +171,23 @@ export function InvoiceList({
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => {
+        const amt = row.original.amount;
         const formatted = new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
-        }).format(row.original.amount);
-        return <span>{formatted}</span>;
+        }).format(amt);
+        return (
+          <span className={`flex items-center gap-1.5 ${amt < 0 ? "text-blue-600 dark:text-blue-400" : ""}`}>
+            {formatted}
+            {amt < 0 && (
+              <span className="text-[10px] font-semibold uppercase tracking-wide bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                Credit
+              </span>
+            )}
+          </span>
+        );
       },
     },
     {
