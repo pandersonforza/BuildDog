@@ -7,7 +7,7 @@ import { BudgetTable } from "@/components/budget/budget-table";
 import { BudgetImport } from "@/components/budget/budget-import";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, Download } from "lucide-react";
+import { Upload, Download, RefreshCw } from "lucide-react";
 import { exportBudgetToExcel } from "@/components/budget/budget-export";
 import { useAuth } from "@/hooks/use-auth";
 import type { BudgetCategoryWithLineItems, BudgetSummary } from "@/types";
@@ -22,7 +22,9 @@ export default function BudgetPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const { canEdit } = useAuth();
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const { canEdit, user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -75,6 +77,23 @@ export default function BudgetPage() {
     );
   }
 
+  const handleRecalculateActuals = async () => {
+    setIsRecalculating(true);
+    try {
+      const res = await fetch("/api/budget/recalculate-actuals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      if (!res.ok) throw new Error("Failed to recalculate");
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-2">
@@ -90,6 +109,17 @@ export default function BudgetPage() {
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import from Excel
+          </Button>
+        )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            onClick={handleRecalculateActuals}
+            disabled={isRecalculating}
+            title="Rebuild actual costs from approved/paid invoices"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRecalculating ? "animate-spin" : ""}`} />
+            {isRecalculating ? "Recalculating…" : "Recalculate Actuals"}
           </Button>
         )}
       </div>

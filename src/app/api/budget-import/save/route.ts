@@ -36,8 +36,23 @@ export async function POST(request: NextRequest) {
     }
 
     await prisma.$transaction(async (tx) => {
+      // Before deleting anything, snapshot existing actualCosts keyed by
+      // lowercase description so we can restore them on the new line items.
+      const preservedActuals = new Map<string, number>();
       if (clearExisting) {
-        // Delete existing line items and categories for this project
+        const existing = await tx.budgetCategory.findMany({
+          where: { projectId },
+          include: {
+            lineItems: { select: { description: true, actualCost: true } },
+          },
+        });
+        for (const cat of existing) {
+          for (const li of cat.lineItems) {
+            preservedActuals.set(li.description.trim().toLowerCase(), li.actualCost);
+          }
+        }
+
+        // Now delete existing categories/line items
         const existingCategories = await tx.budgetCategory.findMany({
           where: { projectId },
           select: { id: true },
@@ -54,7 +69,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Create new categories with line items
+      // Create new categories with line items, restoring any prior actualCost
       for (const cat of categories) {
         await tx.budgetCategory.create({
           data: {
@@ -67,7 +82,7 @@ export async function POST(request: NextRequest) {
                 originalBudget: li.originalBudget,
                 revisedBudget: li.revisedBudget,
                 committedCost: 0,
-                actualCost: 0,
+                actualCost: preservedActuals.get(li.description.trim().toLowerCase()) ?? 0,
               })),
             },
           },
