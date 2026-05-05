@@ -23,6 +23,7 @@ export default function BudgetPage() {
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalcResult, setRecalcResult] = useState<{ invoicesMatched: number; unmatchedCount: number } | null>(null);
   const { canEdit, user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -79,6 +80,7 @@ export default function BudgetPage() {
 
   const handleRecalculateActuals = async () => {
     setIsRecalculating(true);
+    setRecalcResult(null);
     try {
       const res = await fetch("/api/budget/recalculate-actuals", {
         method: "POST",
@@ -86,6 +88,8 @@ export default function BudgetPage() {
         body: JSON.stringify({ projectId }),
       });
       if (!res.ok) throw new Error("Failed to recalculate");
+      const data = await res.json();
+      setRecalcResult({ invoicesMatched: data.invoicesMatched, unmatchedCount: data.unmatchedCount });
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -123,6 +127,13 @@ export default function BudgetPage() {
           </Button>
         )}
       </div>
+      {recalcResult && (
+        <div className={`rounded-md border px-4 py-3 text-sm ${recalcResult.unmatchedCount > 0 ? "border-yellow-400/50 bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-300" : "border-emerald-400/50 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300"}`}>
+          {recalcResult.unmatchedCount === 0
+            ? `✓ All ${recalcResult.invoicesMatched} invoice${recalcResult.invoicesMatched !== 1 ? "s" : ""} matched — actuals restored.`
+            : `${recalcResult.invoicesMatched} invoice${recalcResult.invoicesMatched !== 1 ? "s" : ""} restored. ${recalcResult.unmatchedCount} invoice${recalcResult.unmatchedCount !== 1 ? "s" : ""} could not be matched — they may need to be re-linked to a budget line item.`}
+        </div>
+      )}
       {summary && (
         <BudgetOverview summary={summary} categories={categories} />
       )}
