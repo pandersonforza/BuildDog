@@ -9,9 +9,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { projectId } = await request.json();
+    const { projectId, relinks = [] } = await request.json() as {
+      projectId: string;
+      relinks?: { invoiceId: string; lineItemId: string }[];
+    };
     if (!projectId) {
       return NextResponse.json({ error: 'projectId required' }, { status: 400 });
+    }
+
+    // Apply any admin-supplied relinks first so the recalculate picks them up via normal ID matching
+    if (relinks.length > 0) {
+      await prisma.$transaction(
+        relinks.map(({ invoiceId, lineItemId }) =>
+          prisma.invoice.update({
+            where: { id: invoiceId },
+            data: { budgetLineItemId: lineItemId },
+          })
+        )
+      );
     }
 
     // 1. Load all current line items and build two lookup maps:
