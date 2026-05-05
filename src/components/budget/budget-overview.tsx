@@ -33,7 +33,7 @@ export function BudgetOverview({ summary, categories }: BudgetOverviewProps) {
     )
     .reduce((sum, li) => sum + (li.actualCost - li.revisedBudget), 0);
 
-  const currentContingency = contingencyBudget - totalOverages;
+  const currentContingency = contingencyItems.length === 0 ? 0 : contingencyBudget - totalOverages;
 
   const cards = [
     { label: "Original Budget", amount: summary.originalBudget },
