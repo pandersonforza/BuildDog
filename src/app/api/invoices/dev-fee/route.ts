@@ -4,6 +4,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { put } from '@vercel/blob';
 
+export const maxDuration = 60;
+
 /** Compute the next available DF-XXXX number by scanning existing invoices. */
 async function getNextDevFeeNumber(): Promise<number> {
   const dfInvoices = await prisma.invoice.findMany({
@@ -38,6 +40,21 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+/**
+ * pdf-lib's standard Helvetica font only supports WinAnsi (Latin-1).
+ * Replace common Unicode punctuation with ASCII equivalents, then
+ * strip anything still outside 0x00–0xFF so drawText never throws.
+ */
+function safe(str: string): string {
+  return str
+    .replace(/[‘’ʼ]/g, "'")   // curly single quotes / apostrophe
+    .replace(/[“”]/g, '"')           // curly double quotes
+    .replace(/–/g, '-')                   // en dash
+    .replace(/—/g, '--')                  // em dash
+    .replace(/…/g, '...')                 // ellipsis
+    .replace(/[^\x00-\xFF]/g, '?');            // anything else outside Latin-1
+}
+
 /** Build a PDF for a dev-fee invoice and return its bytes. */
 async function generateDevFeePdf(opts: {
   invoiceNumber: string;
@@ -70,11 +87,12 @@ async function generateDevFeePdf(opts: {
     yPos: number,
     opts?: { bold?: boolean; size?: number; color?: ReturnType<typeof rgb>; rightAlign?: boolean }
   ) => {
+    const safeStr = safe(str);
     const f = opts?.bold ? fontBold : font;
     const sz = opts?.size ?? 10;
     const col = opts?.color ?? dark;
-    const xPos = opts?.rightAlign ? x - f.widthOfTextAtSize(str, sz) : x;
-    page.drawText(str, { x: xPos, y: yPos, font: f, size: sz, color: col });
+    const xPos = opts?.rightAlign ? x - f.widthOfTextAtSize(safeStr, sz) : x;
+    page.drawText(safeStr, { x: xPos, y: yPos, font: f, size: sz, color: col });
   };
 
   const hline = (yPos: number, x1 = margin, x2 = pageWidth - margin, thickness = 0.5, color = rgb(0.8, 0.8, 0.8)) => {
