@@ -6,9 +6,11 @@ import { DataTable } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DrawForm } from "@/components/draws/draw-form";
 import { DrawDetail } from "@/components/draws/draw-detail";
-import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { Plus, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import type { DrawRequestWithLineItems } from "@/types";
@@ -21,8 +23,31 @@ interface DrawListProps {
 
 export function DrawList({ projectId, draws, onMutate }: DrawListProps) {
   const { canEdit } = useAuth();
+  const { toast } = useToast();
   const [formOpen, setFormOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`/api/draws/${deleteId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || "Failed to delete draw");
+      }
+      toast({ title: "Draw deleted" });
+      if (expandedId === deleteId) setExpandedId(null);
+      onMutate();
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete draw",
+        variant: "destructive",
+      });
+    }
+  };
 
   const columns: ColumnDef<DrawRequestWithLineItems, unknown>[] = [
     {
@@ -81,6 +106,31 @@ export function DrawList({ projectId, draws, onMutate }: DrawListProps) {
       cell: ({ row }) =>
         row.original.fundedDate ? formatDate(row.original.fundedDate) : "-",
     },
+    ...(canEdit
+      ? [
+          {
+            id: "actions",
+            header: "",
+            enableSorting: false,
+            cell: ({ row }: { row: { original: DrawRequestWithLineItems } }) =>
+              row.original.status === "Draft" ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteId(row.original.id);
+                    setDeleteOpen(true);
+                  }}
+                  title="Delete draft"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              ) : null,
+          } as ColumnDef<DrawRequestWithLineItems, unknown>,
+        ]
+      : []),
   ];
 
   return (
@@ -117,6 +167,15 @@ export function DrawList({ projectId, draws, onMutate }: DrawListProps) {
         onOpenChange={setFormOpen}
         projectId={projectId}
         onSuccess={onMutate}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete Draft Draw"
+        description="Are you sure you want to delete this draft draw request? This cannot be undone."
+        onConfirm={handleDelete}
+        confirmLabel="Delete"
       />
     </div>
   );
