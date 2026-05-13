@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { put } from '@vercel/blob';
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 /** Compute the next available DF-XXXX number by scanning existing invoices. */
 async function getNextDevFeeNumber(): Promise<number> {
@@ -28,156 +26,8 @@ function formatDevFeeNumber(n: number): string {
   return `DF-${String(n).padStart(4, '0')}`;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-/**
- * pdf-lib's standard Helvetica font only supports WinAnsi (Latin-1).
- * Replace common Unicode punctuation with ASCII equivalents, then
- * strip anything still outside 0x00–0xFF so drawText never throws.
- */
-function safe(str: string): string {
-  return str
-    .replace(/[‘’ʼ]/g, "'")   // curly single quotes / apostrophe
-    .replace(/[“”]/g, '"')           // curly double quotes
-    .replace(/–/g, '-')                   // en dash
-    .replace(/—/g, '--')                  // em dash
-    .replace(/…/g, '...')                 // ellipsis
-    .replace(/[^\x00-\xFF]/g, '?');            // anything else outside Latin-1
-}
-
-/** Build a PDF for a dev-fee invoice and return its bytes. */
-async function generateDevFeePdf(opts: {
-  invoiceNumber: string;
-  invoiceDate: Date;
-  vendorName: string;
-  projectName: string;
-  projectAddress: string;
-  milestones: { name: string; devFee: number }[];
-  totalAmount: number;
-  approverName: string | null;
-}): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-
-  const pageWidth = 612;
-  const pageHeight = 792;
-  const margin = 50;
-  const lineHeight = 18;
-  const teal = rgb(0.16, 0.6, 0.6);
-  const dark = rgb(0.1, 0.1, 0.1);
-  const muted = rgb(0.45, 0.45, 0.45);
-
-  let page = doc.addPage([pageWidth, pageHeight]);
-  let y = pageHeight - margin;
-
-  const text = (
-    str: string,
-    x: number,
-    yPos: number,
-    opts?: { bold?: boolean; size?: number; color?: ReturnType<typeof rgb>; rightAlign?: boolean }
-  ) => {
-    const safeStr = safe(str);
-    const f = opts?.bold ? fontBold : font;
-    const sz = opts?.size ?? 10;
-    const col = opts?.color ?? dark;
-    const xPos = opts?.rightAlign ? x - f.widthOfTextAtSize(safeStr, sz) : x;
-    page.drawText(safeStr, { x: xPos, y: yPos, font: f, size: sz, color: col });
-  };
-
-  const hline = (yPos: number, x1 = margin, x2 = pageWidth - margin, thickness = 0.5, color = rgb(0.8, 0.8, 0.8)) => {
-    page.drawLine({ start: { x: x1, y: yPos }, end: { x: x2, y: yPos }, thickness, color });
-  };
-
-  const ensureSpace = (needed: number) => {
-    if (y - needed < margin) {
-      page = doc.addPage([pageWidth, pageHeight]);
-      y = pageHeight - margin;
-    }
-  };
-
-  // ── Header ──────────────────────────────────────────────
-  text('PropHound', margin, y, { bold: true, size: 20, color: teal });
-  text('DEVELOPMENT FEE INVOICE', pageWidth - margin, y, { bold: true, size: 11, color: muted, rightAlign: true });
-  y -= 8;
-  hline(y, margin, pageWidth - margin, 1.5, teal);
-  y -= 20;
-
-  // Invoice meta — two columns
-  text('Invoice Number:', margin, y, { bold: true, size: 10 });
-  text(opts.invoiceNumber, margin + 110, y, { size: 10, color: teal });
-  text('Invoice Date:', pageWidth - margin - 200, y, { bold: true, size: 10 });
-  text(formatDate(opts.invoiceDate), pageWidth - margin - 95, y, { size: 10 });
-  y -= lineHeight;
-
-  text('Billed By:', margin, y, { bold: true, size: 10 });
-  text(opts.vendorName, margin + 110, y, { size: 10 });
-  if (opts.approverName) {
-    text('Approver:', pageWidth - margin - 200, y, { bold: true, size: 10 });
-    text(opts.approverName, pageWidth - margin - 95, y, { size: 10 });
-  }
-  y -= lineHeight;
-
-  text('Project:', margin, y, { bold: true, size: 10 });
-  text(opts.projectName, margin + 110, y, { size: 10 });
-  y -= lineHeight;
-
-  if (opts.projectAddress) {
-    text('Address:', margin, y, { bold: true, size: 10 });
-    text(opts.projectAddress, margin + 110, y, { size: 10 });
-    y -= lineHeight;
-  }
-
-  y -= 10;
-  hline(y);
-  y -= 20;
-
-  // ── Milestone table ──────────────────────────────────────
-  text('Milestone', margin, y, { bold: true, size: 9, color: muted });
-  text('Dev Fee', pageWidth - margin, y, { bold: true, size: 9, color: muted, rightAlign: true });
-  y -= 6;
-  hline(y);
-  y -= lineHeight;
-
-  for (const m of opts.milestones) {
-    ensureSpace(lineHeight + 4);
-    text(m.name, margin, y, { size: 10 });
-    text(formatCurrency(m.devFee), pageWidth - margin, y, { size: 10, rightAlign: true });
-    y -= lineHeight;
-  }
-
-  // Total row
-  ensureSpace(lineHeight + 14);
-  y -= 4;
-  hline(y, margin, pageWidth - margin, 1, dark);
-  y -= lineHeight;
-  text('Total', margin, y, { bold: true, size: 12 });
-  text(formatCurrency(opts.totalAmount), pageWidth - margin, y, { bold: true, size: 12, color: teal, rightAlign: true });
-  y -= 30;
-
-  // ── Footer note ──────────────────────────────────────────
-  ensureSpace(30);
-  hline(y, margin, pageWidth - margin, 0.5, rgb(0.85, 0.85, 0.85));
-  y -= 14;
-  text(`Generated ${formatDate(new Date())}`, margin, y, { size: 8, color: muted });
-  text('PropHound', pageWidth - margin, y, { size: 8, color: teal, rightAlign: true });
-
-  return doc.save();
-}
-
 // ── GET: preview next invoice number ────────────────────────────────────────
 
-/** GET — returns the next available dev-fee invoice number for preview. */
 export async function GET() {
   try {
     const user = await getCurrentUser();
@@ -185,14 +35,14 @@ export async function GET() {
 
     const next = await getNextDevFeeNumber();
     return NextResponse.json({ formatted: formatDevFeeNumber(next) });
-  } catch {
-    return NextResponse.json({ error: 'Failed to get next invoice number' }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-// ── POST: create invoice + PDF ───────────────────────────────────────────────
+// ── POST: create invoice ─────────────────────────────────────────────────────
 
-/** POST — create a dev-fee invoice (with attached PDF) for the selected milestones. */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -250,28 +100,17 @@ export async function POST(request: NextRequest) {
     // Generate invoice number
     const invoiceNumber = formatDevFeeNumber(await getNextDevFeeNumber());
 
-    // Generate PDF
-    const pdfBytes = await generateDevFeePdf({
-      invoiceNumber,
-      invoiceDate: parsedDate,
-      vendorName: vendorName.trim(),
-      projectName: project?.name ?? 'Unknown Project',
-      projectAddress: project?.address ?? '',
-      milestones,
-      totalAmount,
-      approverName,
-    });
-
-    // Upload PDF to Vercel Blob
-    const blobName = `invoices/dev-fee/${invoiceNumber}.pdf`;
-    const blob = await put(blobName, Buffer.from(pdfBytes), {
-      access: 'public',
-      contentType: 'application/pdf',
-    });
-
     const milestoneLines = milestones
       .map((m) => `${m.name}: $${m.devFee.toFixed(2)}`)
       .join('\n');
+
+    // Store project + milestone metadata in aiNotes so the PDF endpoint can use it
+    const pdfMeta = JSON.stringify({
+      projectName: project?.name ?? '',
+      projectAddress: project?.address ?? '',
+      milestones: milestones.map((m) => ({ name: m.name, devFee: m.devFee })),
+      approverName,
+    });
 
     const invoice = await prisma.invoice.create({
       data: {
@@ -281,20 +120,20 @@ export async function POST(request: NextRequest) {
         date: parsedDate,
         description: `Dev Fee: ${milestones.map((m) => m.name).join(', ')}`,
         projectId,
-        filePath: blob.url,
         status: body.submitForApproval ? 'Submitted' : 'Pending Review',
         approverId: body.approverId ?? null,
         approver: approverName,
         submittedBy: body.submitForApproval ? user.name : null,
         submittedById: body.submitForApproval ? user.id : null,
         submittedDate: body.submitForApproval ? new Date() : null,
-        aiNotes: `Dev Fee Invoice\n\nMilestones:\n${milestoneLines}`,
+        aiNotes: `Dev Fee Invoice\n\nMilestones:\n${milestoneLines}\n\n__devFeePdfMeta__${pdfMeta}`,
       },
     });
 
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
-    console.error('Failed to create dev fee invoice:', error);
-    return NextResponse.json({ error: 'Failed to create dev fee invoice' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Failed to create dev fee invoice:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

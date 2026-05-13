@@ -27,7 +27,15 @@ import { InvoiceApprovalDialog } from "@/components/invoices/invoice-approval-di
 import { PROJECT_GROUPS } from "@/lib/constants";
 import type { InvoiceWithRelations } from "@/types";
 
-function getInvoicePdfUrl(filePath: string | null | undefined): string | null {
+function getInvoicePdfUrl(
+  filePath: string | null | undefined,
+  id?: string,
+  invoiceNumber?: string | null
+): string | null {
+  // Dev fee invoices: generate PDF on demand from our endpoint
+  if (invoiceNumber?.startsWith("DF-") && id) {
+    return `/api/invoices/dev-fee/${id}/pdf`;
+  }
   if (!filePath) return null;
   return filePath.startsWith("http")
     ? `/api/invoices/file?url=${encodeURIComponent(filePath)}`
@@ -268,9 +276,9 @@ export function InvoiceList({
             >
               <FileText className="h-4 w-4" />
             </Button>
-            {getInvoicePdfUrl(row.original.filePath) && (
+            {getInvoicePdfUrl(row.original.filePath, row.original.id, row.original.invoiceNumber) && (
               <a
-                href={getInvoicePdfUrl(row.original.filePath)!}
+                href={getInvoicePdfUrl(row.original.filePath, row.original.id, row.original.invoiceNumber)!}
                 target="_blank"
                 rel="noopener noreferrer"
                 download={`${row.original.vendorName ?? "Invoice"}${row.original.invoiceNumber ? ` - ${row.original.invoiceNumber}` : ""}.pdf`}
@@ -502,7 +510,7 @@ export function InvoiceList({
           if (match) { try { payItems = JSON.parse(match[1]); } catch { /* empty */ } }
           const isPayApp = payItems.length > 0;
 
-          const pdfUrl = getInvoicePdfUrl(viewingInvoice.filePath);
+          const pdfUrl = getInvoicePdfUrl(viewingInvoice.filePath, viewingInvoice.id, viewingInvoice.invoiceNumber);
 
           return (
             <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
