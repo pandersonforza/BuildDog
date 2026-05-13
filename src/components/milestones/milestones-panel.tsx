@@ -86,10 +86,12 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  // Fetch approver list and next invoice number when the invoice dialog opens
+  // Fetch approver list and next invoice number when the invoice dialog opens;
+  // also pre-select all milestones so the user can deselect what they don't want.
   useEffect(() => {
     if (!invoiceDialogOpen) return;
     setInvoiceDate(new Date().toISOString().split("T")[0]);
+    setSelectedIds(new Set(milestones.map((m) => m.id)));
     Promise.all([
       fetch("/api/auth/users").then((r) => r.json()),
       fetch("/api/invoices/dev-fee").then((r) => r.json()),
@@ -99,7 +101,7 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
         setNextInvoiceNumber(numData.formatted ?? "");
       })
       .catch(() => {});
-  }, [invoiceDialogOpen]);
+  }, [invoiceDialogOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerateInvoice = async (submitForApproval: boolean) => {
     if (selectedIds.size === 0) return;
@@ -349,16 +351,9 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                   <Button
                     variant="outline"
                     onClick={() => setInvoiceDialogOpen(true)}
-                    disabled={selectedIds.size === 0}
-                    title={selectedIds.size === 0 ? "Select milestones to generate an invoice" : undefined}
                   >
                     <Receipt className="h-4 w-4 mr-2" />
                     Generate Dev Fee Invoice
-                    {selectedIds.size > 0 && (
-                      <span className="ml-1.5 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5">
-                        {selectedIds.size}
-                      </span>
-                    )}
                   </Button>
                 )}
                 <label className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
@@ -399,17 +394,6 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
-                    {canEdit && (
-                      <th className="py-3 pr-3 w-10">
-                        <input
-                          type="checkbox"
-                          className="rounded border-border cursor-pointer"
-                          checked={selectedIds.size === milestones.length && milestones.length > 0}
-                          onChange={toggleSelectAll}
-                          title="Select all"
-                        />
-                      </th>
-                    )}
                     <th className="py-3 pr-4 w-10"></th>
                     <th className="py-3 pr-4">Milestone</th>
                     <th className="py-3 pr-4 text-right">Dev Fee</th>
@@ -428,16 +412,6 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                         key={m.id}
                         className={`border-b border-border/50 hover:bg-muted/30 ${isCompleted ? "opacity-60" : ""}`}
                       >
-                        {canEdit && (
-                          <td className="py-3 pr-3">
-                            <input
-                              type="checkbox"
-                              className="rounded border-border cursor-pointer"
-                              checked={selectedIds.has(m.id)}
-                              onChange={() => toggleSelect(m.id)}
-                            />
-                          </td>
-                        )}
                         <td className="py-3 pr-4">
                           <button
                             onClick={() => canEdit && handleToggleComplete(m)}
@@ -521,7 +495,6 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-primary/20 font-semibold">
-                    {canEdit && <td className="py-3 pr-3"></td>}
                     <td className="py-3 pr-4"></td>
                     <td className="py-3 pr-4">Totals</td>
                     <td className="py-3 pr-4 text-right">{formatCurrency(totalExpectedFees)}</td>
@@ -566,24 +539,47 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
           <DialogHeader>
             <DialogTitle>Generate Dev Fee Invoice</DialogTitle>
             <DialogDescription>
-              Creating invoice{nextInvoiceNumber ? ` ${nextInvoiceNumber}` : ""} for {selectedIds.size} selected milestone{selectedIds.size !== 1 ? "s" : ""}.
+              Select the milestones to include, then fill in the invoice details.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Selected milestones summary */}
-            <div className="rounded-md border border-border bg-muted/30 divide-y divide-border">
-              {milestones
-                .filter((m) => selectedIds.has(m.id))
-                .map((m) => (
-                  <div key={m.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="text-foreground">{m.name}</span>
-                    <span className="font-medium tabular-nums">{formatCurrency(m.devFee)}</span>
-                  </div>
+            {/* Milestone checklist */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Milestones</Label>
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={toggleSelectAll}
+                >
+                  {selectedIds.size === milestones.length ? "Deselect all" : "Select all"}
+                </button>
+              </div>
+              <div className="rounded-md border border-border divide-y divide-border max-h-44 overflow-y-auto">
+                {milestones.map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40"
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border-border shrink-0"
+                      checked={selectedIds.has(m.id)}
+                      onChange={() => toggleSelect(m.id)}
+                    />
+                    <span className="flex-1 text-sm">{m.name}</span>
+                    <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                      {formatCurrency(m.devFee)}
+                    </span>
+                  </label>
                 ))}
-              <div className="flex items-center justify-between px-3 py-2 text-sm font-semibold">
-                <span>Total</span>
-                <span className="text-primary">
+              </div>
+              <div className="flex items-center justify-between px-1 text-sm">
+                <span className="text-muted-foreground">
+                  {selectedIds.size} of {milestones.length} selected
+                </span>
+                <span className="font-semibold text-primary">
                   {formatCurrency(
                     milestones
                       .filter((m) => selectedIds.has(m.id))
@@ -642,14 +638,14 @@ export function MilestonesPanel({ projectId }: MilestonesPanelProps) {
             <Button
               variant="outline"
               onClick={() => handleGenerateInvoice(false)}
-              disabled={isGenerating || !invoiceVendorName.trim()}
+              disabled={isGenerating || !invoiceVendorName.trim() || selectedIds.size === 0}
             >
               {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Save as Draft
             </Button>
             <Button
               onClick={() => handleGenerateInvoice(true)}
-              disabled={isGenerating || !invoiceVendorName.trim() || !invoiceApproverId}
+              disabled={isGenerating || !invoiceVendorName.trim() || !invoiceApproverId || selectedIds.size === 0}
             >
               {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Submit for Approval
