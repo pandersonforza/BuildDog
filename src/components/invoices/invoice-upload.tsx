@@ -286,6 +286,20 @@ export function InvoiceUpload({
           });
 
           // Process with AI — failures are non-fatal; push through with empty fields
+          const emptyFallback: AIInvoiceResult = {
+            vendorName: "",
+            invoiceNumber: null,
+            amount: 0,
+            date: new Date().toISOString().slice(0, 10),
+            description: "",
+            confidence: 0,
+            reasoning: "AI could not extract invoice data from this PDF. Please fill in the fields manually.",
+            suggestedProjectId: null,
+            suggestedProjectName: null,
+            suggestedLineItemId: null,
+            suggestedLineItemName: null,
+          };
+
           let invoices: AIInvoiceResult[];
           try {
             const processRes = await fetch("/api/invoices/process", {
@@ -301,21 +315,12 @@ export function InvoiceUpload({
               ...inv,
               suggestedLineItemId: inv.suggestedLineItemId || inv.suggestedBudgetLineItemId || null,
             }));
+
+            // AI returned a valid response but found no invoices — still push through
+            if (invoices.length === 0) invoices = [emptyFallback];
           } catch {
-            // AI couldn't extract data — let the user fill in the fields manually
-            invoices = [{
-              vendorName: "",
-              invoiceNumber: null,
-              amount: 0,
-              date: new Date().toISOString().slice(0, 10),
-              description: "",
-              confidence: 0,
-              reasoning: "AI could not extract invoice data. Please fill in the fields manually.",
-              suggestedProjectId: null,
-              suggestedProjectName: null,
-              suggestedLineItemId: null,
-              suggestedLineItemName: null,
-            }];
+            // Network error or non-200 — push through with blank fields
+            invoices = [emptyFallback];
           }
 
           setProcessingProgress((prev) => prev + 1);
