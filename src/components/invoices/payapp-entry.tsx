@@ -309,9 +309,8 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     e.target.value = "";
   };
 
-  // Apply PDF extracted items to the grid (net = gross × (1 − retainage%))
+  // Apply PDF extracted items to the grid as gross amounts; retainage is applied globally at save time
   const applyPdfItems = () => {
-    const rate = Math.min(Math.max(retainagePct, 0), 100) / 100;
     let applied = 0;
     setItems((prev) => {
       const updated = [...prev];
@@ -320,8 +319,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         if (!targetId) continue;
         const idx = updated.findIndex((item) => item.lineItemId === targetId);
         if (idx >= 0) {
-          const net = Math.round(pdfItem.grossAmount * (1 - rate) * 100) / 100;
-          updated[idx] = { ...updated[idx], currentAmount: net };
+          updated[idx] = { ...updated[idx], currentAmount: pdfItem.grossAmount };
           applied++;
         }
       }
@@ -399,8 +397,10 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
     );
   };
 
+  const retainageRate = Math.min(Math.max(retainagePct, 0), 100) / 100;
+  const netAmount = (gross: number) => Math.round(gross * (1 - retainageRate) * 100) / 100;
   const itemsWithAmounts = items.filter((li) => li.currentAmount > 0);
-  const totalCurrentBilled = itemsWithAmounts.reduce((sum, li) => sum + li.currentAmount, 0);
+  const totalCurrentBilled = itemsWithAmounts.reduce((sum, li) => sum + netAmount(li.currentAmount), 0);
 
   const handleSave = async (submitForApproval = false) => {
     if (itemsWithAmounts.length === 0) {
@@ -425,14 +425,14 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
 
       // Build line item breakdown for the description
       const lineBreakdown = itemsWithAmounts
-        .map((li) => `${li.description}: ${formatCurrency(li.currentAmount)}`)
+        .map((li) => `${li.description}: ${formatCurrency(netAmount(li.currentAmount))}`)
         .join("\n");
 
-      // Store line item IDs and amounts as JSON for budget distribution on approval
+      // Store line item IDs and net amounts as JSON for budget distribution on approval
       const payAppLineItems = itemsWithAmounts.map((li) => ({
         lineItemId: li.lineItemId,
         description: li.description,
-        amount: li.currentAmount,
+        amount: netAmount(li.currentAmount),
       }));
 
       const body: Record<string, unknown> = {
@@ -530,7 +530,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
         {step === "form" && (
           <div className="space-y-4">
             {/* Header info */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>GC Company *</Label>
                 <Input
@@ -553,6 +553,18 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                   type="date"
                   value={periodTo}
                   onChange={(e) => setPeriodTo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Retainage %</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={retainagePct}
+                  onChange={(e) => setRetainagePct(parseFloat(e.target.value) || 0)}
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -632,8 +644,9 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                       <th className="py-2 px-3">Line Item</th>
                       <th className="py-2 px-3 text-right w-32">Budget</th>
                       <th className="py-2 px-3 text-right w-32">Previously Billed</th>
-                      <th className="py-2 px-3 text-right w-36">This Period</th>
-                      <th className="py-2 px-3 text-right w-32">Remaining</th>
+                      <th className="py-2 px-3 text-right w-36">{retainageRate > 0 ? "This Period (Gross)" : "This Period"}</th>
+                      {retainageRate > 0 && <th className="py-2 px-3 text-right w-28">Net (−ret.)</th>}
+                      <th className="py-2 px-3 text-right w-28">Remaining</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -641,13 +654,14 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                       <tbody key={catName}>
                         {/* Subcategory header */}
                         <tr className="bg-primary/10 border-t-2 border-primary/20">
-                          <td colSpan={5} className="py-2 px-3 font-semibold text-foreground">
+                          <td colSpan={retainageRate > 0 ? 6 : 5} className="py-2 px-3 font-semibold text-foreground">
                             {catName}
                           </td>
                         </tr>
                         {catItems.map((item) => {
                           const idx = items.indexOf(item);
-                          const remaining = item.budget - item.previouslyBilled - item.currentAmount;
+                          const net = netAmount(item.currentAmount);
+                          const remaining = item.budget - item.previouslyBilled - net;
                           return (
                             <tr key={item.lineItemId} className="border-b border-border/50 hover:bg-muted/30">
                               <td className="py-1.5 px-3">{item.description}</td>
@@ -667,6 +681,11 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                                   placeholder="0.00"
                                 />
                               </td>
+                              {retainageRate > 0 && (
+                                <td className="py-1.5 px-3 text-right text-muted-foreground">
+                                  {item.currentAmount > 0 ? formatCurrency(net) : ""}
+                                </td>
+                              )}
                               <td className={`py-1.5 px-3 text-right ${remaining < 0 ? "text-red-400" : "text-muted-foreground"}`}>
                                 {formatCurrency(remaining)}
                               </td>
@@ -688,11 +707,16 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                         {formatCurrency(items.reduce((s, li) => s + li.previouslyBilled, 0))}
                       </td>
                       <td className="py-2 px-3 text-right text-primary">
-                        {formatCurrency(totalCurrentBilled)}
+                        {formatCurrency(items.reduce((s, li) => s + li.currentAmount, 0))}
                       </td>
+                      {retainageRate > 0 && (
+                        <td className="py-2 px-3 text-right text-primary">
+                          {formatCurrency(totalCurrentBilled)}
+                        </td>
+                      )}
                       <td className="py-2 px-3 text-right">
                         {formatCurrency(
-                          items.reduce((s, li) => s + li.budget - li.previouslyBilled - li.currentAmount, 0)
+                          items.reduce((s, li) => s + li.budget - li.previouslyBilled - netAmount(li.currentAmount), 0)
                         )}
                       </td>
                     </tr>
@@ -705,20 +729,13 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
             {pdfItems.length > 0 && (
               <div className="border border-border rounded-lg overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">PDF Extracted Items</span>
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-xs text-muted-foreground">Retainage %</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        value={retainagePct}
-                        onChange={(e) => setRetainagePct(parseFloat(e.target.value) || 0)}
-                        className="h-7 w-20 text-sm text-right"
-                      />
-                    </div>
+                    {retainageRate > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        ({retainagePct}% retainage applied on save)
+                      </span>
+                    )}
                   </div>
                   <Button type="button" size="sm" onClick={applyPdfItems}>
                     Apply to Grid
@@ -740,8 +757,7 @@ export function PayAppEntry({ open, onOpenChange, projectId, onSuccess }: PayApp
                         const matchedItem = pdfItem.matchedLineItemId
                           ? items.find((i) => i.lineItemId === pdfItem.matchedLineItemId)
                           : null;
-                        const rate = Math.min(Math.max(retainagePct, 0), 100) / 100;
-                        const net = Math.round(pdfItem.grossAmount * (1 - rate) * 100) / 100;
+                        const net = Math.round(pdfItem.grossAmount * (1 - retainageRate) * 100) / 100;
                         return (
                           <tr key={idx} className="border-b border-border/50 hover:bg-muted/20">
                             <td className="py-1.5 px-3 text-foreground">{pdfItem.description}</td>
